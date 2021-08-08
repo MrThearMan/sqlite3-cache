@@ -72,6 +72,11 @@ class Cache:
         "DELETE FROM cache"
     )
 
+    _add_many_sql = (
+        "INSERT INTO cache (key, value, exp) VALUES {}"
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value, exp=excluded.exp "
+        "WHERE DATETIME(exp, 'unixepoch') <= DATETIME('now')"
+    )
     _get_many_sql = (
         "SELECT key, value, exp FROM cache WHERE key IN ({})"
     )
@@ -147,6 +152,20 @@ class Cache:
         self.cur.execute(self._update_sql, data)
 
     @sqlite_method
+    def add_many(self, dict_: dict, timeout: int = DEFAULT_TIMEOUT) -> None:
+        command = self._add_many_sql.format(
+            ", ".join([f"(:key{n}, :value{n}, :exp{n})" for n in range(len(dict_))])
+        )
+
+        data = {}
+        for i, (key, value) in enumerate(dict_.items()):
+            data[f"key{i}"] = key
+            data[f"value{i}"] = self._stream(value)
+            data[f"exp{i}"] = self._exp_timestamp(timeout)
+
+        self.cur.execute(command, data)
+
+    @sqlite_method
     def get_or_set(self, key: str, default: Any, timeout: int = DEFAULT_TIMEOUT) -> Any:
         self.cur.execute(self._get_sql, {"key": key})
         result: Optional[tuple] = self.cur.fetchone()
@@ -164,8 +183,8 @@ class Cache:
         return default
 
     @sqlite_method
-    def get_many(self, values: list) -> dict:
-        self.cur.execute(self._get_many_sql.format(", ".join([f"'{value}'" for value in values])))
+    def get_many(self, keys: list) -> dict:
+        self.cur.execute(self._get_many_sql.format(", ".join([f"'{value}'" for value in keys])))
         fetched: Optional[list] = self.cur.fetchall()
 
         if fetched is None:
@@ -202,8 +221,14 @@ class Cache:
         self.cur.execute(command, data)
 
     @sqlite_method
-    def delete_many(self, values: list) -> None:
-        self.cur.execute(self._delete_many_sql.format(", ".join([f"'{value}'" for value in values])))
+    def delete_many(self, keys: list) -> None:
+        self.cur.execute(self._delete_many_sql.format(", ".join([f"'{value}'" for value in keys])))
+
+    @sqlite_method
+    def update_many(self, dict_: dict):
+        for key, value in dict_.items():
+            data = {"key": key, "value": self._stream(value)}
+            self.cur.execute(self._update_sql, data)
 
     @sqlite_method
     def touch(self, key: str, timeout: int = DEFAULT_TIMEOUT) -> None:
