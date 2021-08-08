@@ -1,0 +1,1 @@
+from .sqlite_cache import cache
