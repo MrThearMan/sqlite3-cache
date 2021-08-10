@@ -1,1 +1,1 @@
-from .sqlite_cache import cache
+from .sqlite_cache import Cache

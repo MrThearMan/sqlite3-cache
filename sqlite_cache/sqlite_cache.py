@@ -1,11 +1,12 @@
 import sqlite3
 import pickle
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Any
 from functools import wraps
 
 
-__all__ = ["cache"]
+__all__ = ["Cache"]
 
 
 def sqlite_method(method):
@@ -92,15 +93,13 @@ class Cache:
         """Create a cache with sqlite3.
 
         :param filename: Cache file name.
-        :param path: Path string to the wanted db location. Must include the trailing / or \\.
-                     If None, use current directory.
+        :param path: Path string to the wanted db location. If None, use current directory.
         :param in_memory: Create database in-memory only. File is still created, but nothing is stored in it.
         """
 
-        self.filename = filename
-        self.path = "" if path is None else path
+        self.filepath = filename if path is None else str(Path(path) / filename)
         self.suffix = ":?mode=memory&cache=shared" if in_memory else ""
-        self.connection_string = f"{self.path}{self.filename}{self.suffix}"
+        self.connection_string = f"{self.filepath}{self.suffix}"
 
         con = sqlite3.connect(self.connection_string)
         self.cur = con.cursor()
@@ -272,6 +271,3 @@ class Cache:
 
         data = {"key": key, "value": self._stream(value - delta)}
         self.cur.execute(self._update_sql, data)
-
-
-cache = Cache()

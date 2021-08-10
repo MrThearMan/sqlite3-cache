@@ -1,16 +1,30 @@
 # SQLite Cache
 
 Use [SQLite3](https://docs.python.org/3/library/sqlite3.html) as quick, persistent, thread-safe cache. 
-Can store any picklable objects.
+Can store any [picklable](https://docs.python.org/3/library/pickle.html) objects.
 
 ```python
-from sqlite_cache import cache
+from sqlite_cache import Cache
+
+cache = Cache()
 ```
 
 ###  Documentation:
 
 Interface works similarly to [django's cache interface](https://docs.djangoproject.com/en/3.2/topics/cache/#basic-usage)
 with a few additions.
+
+---
+
+#### *Cache(...) → Cache*
+- filename: str = ".cache" - Cache file name.
+- path: str = None - Path string to the wanted db location. If None, use current directory.
+- in_memory: bool = True - Create database in-memory only. File is still created, but 
+  nothing is stored in it.
+
+Create a new cache in the specified location. The class itself is not a singleton, but cache 
+intances with the same filename and path will share the same cache, and the latter instance 
+will not clear the cache on instantiation.
 
 ---
 
@@ -38,7 +52,7 @@ Get the value under some key. Return `default` if key not in the cache or expire
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
 
 Set a value in cache under some key. Value stays in the cache unless even if timeout
-is reached, and only gets deleted on the next call to `cache.get`.
+is reached, and only gets deleted on the next call to `cache.get` or `cache.get_many`.
 
 ---
 
