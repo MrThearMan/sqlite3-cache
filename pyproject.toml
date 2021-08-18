@@ -1,3 +1,8 @@
+[tool.coverage.report]
+omit = [
+    "tests/*",
+]
+
 [build-system]
 requires = [
     "setuptools>=42",

@@ -51,7 +51,7 @@ Get the value under some key. Return `default` if key not in the cache or expire
 - value: Any — Picklable object to store.
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
 
-Set a value in cache under some key. Value stays in the cache unless even if timeout
+Set a value in cache under some key. Value stays in the cache even if timeout
 is reached, and only gets deleted on the next call to `cache.get` or `cache.get_many`.
 
 ---

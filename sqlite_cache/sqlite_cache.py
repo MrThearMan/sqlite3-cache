@@ -9,33 +9,6 @@ from functools import wraps
 __all__ = ["Cache"]
 
 
-def sqlite_method(method):
-    """Wrapped method is executed under an open sqlite3 connection.
-    Method's class should contain a 'self.connection_string' that is used to make the connection.
-    This decorator then updates a 'sef.cur' object inside the class to the current cursor-object.
-    After the method is finished, or if it raises an exception, the connection is closed and the
-    return value or exception propagated.
-    """
-
-    @wraps(method)
-    def inner(*args, **kwargs):
-        self = args[0]
-        con = sqlite3.connect(self.connection_string)
-
-        try:
-            self.cur = con.cursor()
-            value = method(*args, **kwargs)
-            con.commit()
-        except Exception as e:
-            con.close()
-            raise e
-
-        con.close()
-        return value
-
-    return inner
-
-
 class Cache:
 
     DEFAULT_TIMEOUT = 300
@@ -43,6 +16,28 @@ class Cache:
     _create_sql = (
         "CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, value BLOB, exp FLOAT)"
     )
+    _create_index_sql = (
+        "CREATE UNIQUE INDEX IF NOT EXISTS cache_key ON cache(key)"
+    )
+    _set_mmap_size = (
+        "PRAGMA mmap_size={};"
+    )
+    _set_to_wal_mode = (
+        "PRAGMA journal_mode=WAL;"
+    )
+    _set_wal_autocheckpoint = (
+        "PRAGMA wal_autocheckpoint={};"
+    )
+    _set_auto_vacuum = (
+        "PRAGMA auto_vacuum=1;"  # Full
+    )
+    _set_synchronous = (
+        "PRAGMA synchronous=1"  # Normal
+    )
+    _set_cache_size = (
+        "PRAGMA cache_size={}"
+    )
+
     _add_sql = (
         "INSERT INTO cache (key, value, exp) VALUES (:key, :value, :exp) "
         "ON CONFLICT(key) DO UPDATE SET value=:value, exp=:exp "
@@ -89,23 +84,48 @@ class Cache:
         "DELETE FROM cache WHERE key IN ({})"
     )
 
-    def __init__(self, *, filename: str = ".cache", path: str = None, in_memory: bool = True):
+    def __init__(
+        self,
+        *,
+        filename: str = ".cache",
+        path: str = None,
+        in_memory: bool = True,
+        memory_map_size: int = 2 ** 26,  # 64 MB
+        cache_size: int = 2 ** 13,  # 8,192 pages
+        wal_max_pages: int = 1000,
+    ):
         """Create a cache with sqlite3.
 
         :param filename: Cache file name.
         :param path: Path string to the wanted db location. If None, use current directory.
         :param in_memory: Create database in-memory only. File is still created, but nothing is stored in it.
+        :param memory_map_size: The maximum number of bytes that are set aside for memory-mapped
+                                I/O on a single database.
+        :param cache_size: The maximum number of database disk pages that SQLite will hold in
+                           memory at once per open database file.
+        :param wal_max_pages: A write-ahead log (WAL) checkpoint will be run automatically whenever
+                              the WAL equals or exceeds this many pages in length. Setting the
+                              auto-checkpoint size to zero or a negative value turns auto-checkpointing off.
         """
 
         self.filepath = filename if path is None else str(Path(path) / filename)
         self.suffix = ":?mode=memory&cache=shared" if in_memory else ""
         self.connection_string = f"{self.filepath}{self.suffix}"
 
-        con = sqlite3.connect(self.connection_string)
-        self.cur = con.cursor()
+        self.con = sqlite3.connect(self.connection_string)
+        self.cur = self.con.cursor()
         self.cur.execute(self._create_sql)
-        con.commit()
-        con.close()
+        self.cur.execute(self._create_index_sql)
+        self.cur.execute(self._set_mmap_size.format(memory_map_size))
+        self.cur.execute(self._set_to_wal_mode)
+        self.cur.execute(self._set_wal_autocheckpoint.format(wal_max_pages))
+        self.cur.execute(self._set_cache_size.format(cache_size))
+        self.cur.execute(self._set_synchronous)
+        self.cur.execute(self._set_auto_vacuum)
+        self.con.commit()
+
+    def __del__(self):
+        self.con.close()
 
     @staticmethod
     def _exp_timestamp(timeout: int = DEFAULT_TIMEOUT) -> float:
@@ -119,12 +139,11 @@ class Cache:
     def _unstream(value: bytes) -> Any:
         return pickle.loads(value)
 
-    @sqlite_method
     def add(self, key: str, value: Any, timeout: int = DEFAULT_TIMEOUT) -> None:
         data = {"key": key, "value": self._stream(value), "exp": self._exp_timestamp(timeout)}
         self.cur.execute(self._add_sql, data)
+        self.con.commit()
 
-    @sqlite_method
     def get(self, key: str, default: Any = None) -> Any:
         self.cur.execute(self._get_sql, {"key": key})
         result: Optional[tuple] = self.cur.fetchone()
@@ -136,21 +155,21 @@ class Cache:
 
         if datetime.utcnow() >= exp:
             self.cur.execute(self._delete_sql, {"key": key})
+            self.con.commit()
             return default
 
         return self._unstream(result[0])
 
-    @sqlite_method
     def set(self, key: str, value: Any, timeout: int = DEFAULT_TIMEOUT) -> None:
         data = {"key": key, "value": self._stream(value), "exp": self._exp_timestamp(timeout)}
         self.cur.execute(self._set_sql, data)
+        self.con.commit()
 
-    @sqlite_method
     def update(self, key: str, value: Any) -> None:
         data = {"key": key, "value": self._stream(value)}
         self.cur.execute(self._update_sql, data)
+        self.con.commit()
 
-    @sqlite_method
     def add_many(self, dict_: dict, timeout: int = DEFAULT_TIMEOUT) -> None:
         command = self._add_many_sql.format(
             ", ".join([f"(:key{n}, :value{n}, :exp{n})" for n in range(len(dict_))])
@@ -163,8 +182,8 @@ class Cache:
             data[f"exp{i}"] = self._exp_timestamp(timeout)
 
         self.cur.execute(command, data)
+        self.con.commit()
 
-    @sqlite_method
     def get_or_set(self, key: str, default: Any, timeout: int = DEFAULT_TIMEOUT) -> Any:
         self.cur.execute(self._get_sql, {"key": key})
         result: Optional[tuple] = self.cur.fetchone()
@@ -179,14 +198,14 @@ class Cache:
 
         data = {"key": key, "value": self._stream(default), "exp": self._exp_timestamp(timeout)}
         self.cur.execute(self._set_sql, data)
+        self.con.commit()
         return default
 
-    @sqlite_method
     def get_many(self, keys: list) -> dict:
         self.cur.execute(self._get_many_sql.format(", ".join([f"'{value}'" for value in keys])))
-        fetched: Optional[list] = self.cur.fetchall()
+        fetched: list = self.cur.fetchall()
 
-        if fetched is None:
+        if not fetched:
             return {}
 
         results = {}
@@ -202,10 +221,10 @@ class Cache:
 
         if to_delete:
             self.cur.execute(self._delete_many_sql.format(", ".join([f"'{value}'" for value in to_delete])))
+            self.con.commit()
 
         return results
 
-    @sqlite_method
     def set_many(self, dict_: dict, timeout: int = DEFAULT_TIMEOUT) -> None:
         command = self._set_many_sql.format(
             ", ".join([f"(:key{n}, :value{n}, :exp{n})" for n in range(len(dict_))])
@@ -218,31 +237,31 @@ class Cache:
             data[f"exp{i}"] = self._exp_timestamp(timeout)
 
         self.cur.execute(command, data)
+        self.con.commit()
 
-    @sqlite_method
     def delete_many(self, keys: list) -> None:
         self.cur.execute(self._delete_many_sql.format(", ".join([f"'{value}'" for value in keys])))
+        self.con.commit()
 
-    @sqlite_method
     def update_many(self, dict_: dict):
         for key, value in dict_.items():
             data = {"key": key, "value": self._stream(value)}
             self.cur.execute(self._update_sql, data)
+        self.con.commit()
 
-    @sqlite_method
     def touch(self, key: str, timeout: int = DEFAULT_TIMEOUT) -> None:
         data = {"exp": self._exp_timestamp(timeout), "key": key}
         self.cur.execute(self._touch_sql, data)
+        self.con.commit()
 
-    @sqlite_method
     def delete(self, key: str) -> None:
         self.cur.execute(self._delete_sql, {"key": key})
+        self.con.commit()
 
-    @sqlite_method
     def clear(self) -> None:
         self.cur.execute(self._clear_sql)
+        self.con.commit()
 
-    @sqlite_method
     def incr(self, key: str, delta: int = 1) -> None:
         self.cur.execute(self._check_sql, {"key": key})
         result: Optional[tuple] = self.cur.fetchone()
@@ -252,12 +271,12 @@ class Cache:
 
         value = self._unstream(result[0])
         if not isinstance(value, int):
-            raise ValueError("Value is not an integer")
+            raise ValueError("Value is not a number.")
 
         data = {"key": key, "value": self._stream(value + delta)}
         self.cur.execute(self._update_sql, data)
+        self.con.commit()
 
-    @sqlite_method
     def decr(self, key: str, delta: int = 1) -> None:
         self.cur.execute(self._check_sql, {"key": key})
         result: Optional[tuple] = self.cur.fetchone()
@@ -267,7 +286,8 @@ class Cache:
 
         value = self._unstream(result[0])
         if not isinstance(value, int):
-            raise ValueError("Value is not an integer")
+            raise ValueError("Value is not a number.")
 
         data = {"key": key, "value": self._stream(value - delta)}
         self.cur.execute(self._update_sql, data)
+        self.con.commit()
