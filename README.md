@@ -1,5 +1,7 @@
 # SQLite Cache
 
+[![Coverage Status](https://coveralls.io/repos/github/MrThearMan/sqlite-cache/badge.svg?branch=main)](https://coveralls.io/github/MrThearMan/sqlite-cache?branch=main)
+
 Use [SQLite3](https://docs.python.org/3/library/sqlite3.html) as quick, persistent, thread-safe cache. 
 Can store any [picklable](https://docs.python.org/3/library/pickle.html) objects.
 

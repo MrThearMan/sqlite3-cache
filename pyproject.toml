@@ -1,3 +1,6 @@
+[tool.coverage.run]
+relative_files = true
+
 [tool.coverage.report]
 omit = [
     "tests/*",
