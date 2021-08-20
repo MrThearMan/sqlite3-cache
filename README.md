@@ -12,7 +12,8 @@ cache = Cache()
 ###  Documentation:
 
 Interface works similarly to [django's cache interface](https://docs.djangoproject.com/en/3.2/topics/cache/#basic-usage)
-with a few additions.
+with a few additions. Values stay in the cache even if the given timeout is reached, and only gets deleted on the 
+next call to `get`, `get_or_set`, or `get_many`, `delete`, or `delete_many` for that key.
 
 ---
 
@@ -21,6 +22,8 @@ with a few additions.
 - path: str = None - Path string to the wanted db location. If None, use current directory.
 - in_memory: bool = True - Create database in-memory only. File is still created, but 
   nothing is stored in it.
+- timeout: Cache connection timeout.
+- kwargs: Pragma settings. https://www.sqlite.org/pragma.html
 
 Create a new cache in the specified location. The class itself is not a singleton, but cache 
 intances with the same filename and path will share the same cache, and the latter instance 
@@ -33,7 +36,7 @@ will not clear the cache on instantiation.
 - value: Any — Picklable object to store.
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
 
-Add the value to the cache only if the key is not already in the cache, 
+Set the value to the cache only if the key is not already in the cache, 
 or the found value has expired.
 
 ---
@@ -51,8 +54,7 @@ Get the value under some key. Return `default` if key not in the cache or expire
 - value: Any — Picklable object to store.
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
 
-Set a value in cache under some key. Value stays in the cache even if timeout
-is reached, and only gets deleted on the next call to `cache.get` or `cache.get_many`.
+Set a value in cache under some key.
 
 ---
 
@@ -61,6 +63,21 @@ is reached, and only gets deleted on the next call to `cache.get` or `cache.get_
 - value: Any — Picklable object to store.
 
 Update value in the cache. Does nothing if key not in the cache or expired.
+
+---
+
+#### *cache.touch(...) → None*
+- key: str — Cache key.
+- timeout: int = DEFAULT_TIMEOUT — How long the value is valid in cache.
+
+Extend the lifetime of an object in cache. Does nothing if key is not in the cache or is expired.
+
+---
+
+#### *cache.delete(...) → None*
+- key: str — Cache key.
+
+Remove the value under the given key from the cache.
 
 ---
 
@@ -88,13 +105,6 @@ Set values to the cache for all keys in the given dict.
 
 ---
 
-#### *cache.delete_many(...) → None*
-- keys: str — List of cache keys.
-
-Remove all the values under the given keys from the cache.
-
----
-
 #### *cache.update_many(...) → None*
 - dict_: dict — Cache keys with values to update to.
 
@@ -102,18 +112,28 @@ Update values to the cache for all keys in the given dict. Does nothing if key n
 
 ---
 
-#### *cache.touch(...) → None*
-- key: str — Cache key.
+#### *cache.touch_many(...) → None*
+- keys: str — List of cache keys.
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in cache.
 
-Extend the lifetime of an object in cache. Does nothing if key not in the cache or expired.
+Extend the lifetime for all objects under the given keys in cache. 
+Does nothing if a key is not in the cache or is expired.
 
 ---
 
-#### *cache.delete(...) → None*
-- key: str — Cache key.
+#### *cache.delete_many(...) → None*
+- keys: str — List of cache keys.
 
-Remove the value under the given key from the cache.
+Remove all the values under the given keys from the cache.
+
+---
+
+#### *cache.get_or_set(...) → Any*
+- key: str — Cache key.
+- default: Any — Picklable object to store if key is not in cache.
+- timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
+
+Get a value under some key, or set the default if key is not in cache.
 
 ---
 
