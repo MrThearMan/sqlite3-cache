@@ -13,9 +13,9 @@ cache = Cache()
 
 ###  Documentation:
 
-Interface works similarly to [django's cache interface](https://docs.djangoproject.com/en/3.2/topics/cache/#basic-usage)
+Interface works similarly to [Django's cache interface](https://docs.djangoproject.com/en/3.2/topics/cache/#basic-usage)
 with a few additions. Values stay in the cache even if the given timeout is reached, and only gets deleted on the 
-next call to `get`, `get_or_set`, or `get_many`, `delete`, or `delete_many` for that key.
+next call to `clear`, or any of these methods: `get`, `get_or_set`, `get_many`, `delete`, or `delete_many` for that key.
 
 ---
 
@@ -24,7 +24,7 @@ next call to `get`, `get_or_set`, or `get_many`, `delete`, or `delete_many` for 
 - path: str = None - Path string to the wanted db location. If None, use current directory.
 - in_memory: bool = True - Create database in-memory only. File is still created, but 
   nothing is stored in it.
-- timeout: Cache connection timeout.
+- timeout: int - How long to wait for another connection to finnish executing before throwing an exception.
 - kwargs: Pragma settings. https://www.sqlite.org/pragma.html
 
 Create a new cache in the specified location. The class itself is not a singleton, but cache 
