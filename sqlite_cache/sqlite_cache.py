@@ -1,5 +1,6 @@
 import sqlite3
 import pickle
+from contextlib import suppress
 from threading import local
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
@@ -137,10 +138,8 @@ class Cache:
     def close(self) -> None:
         self._con.execute(self._set_pragma.format("optimize"))
         self._con.close()
-        try:
+        with suppress(AttributeError):
             delattr(self.local, 'con')
-        except AttributeError:
-            pass
 
     def _apply_pragma(self):
         for key, value in self.pragma.items():
