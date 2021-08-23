@@ -36,6 +36,25 @@ def test_cache_getitem_keyerror(cache):
         pytest.fail("Accessing a key not in cache did not raise a KeyError.")
 
 
+def test_cache_delitem(cache):
+    cache["foo"] = "bar"
+    del cache["foo"]
+    assert cache.get("foo") is None
+
+
+def test_cache_context_manager(cache):
+    cache["foo"] = "bar"
+    cache.close()
+    with Cache() as cache:
+        value = cache["foo"]
+    assert value == "bar"
+
+
+def test_cache_contains(cache):
+    cache["foo"] = "bar"
+    assert ("foo" in cache) is True
+
+
 def test_cache_value_is_available(cache):
     cache.set("foo", "bar", 1)
     sleep(0.9)
@@ -197,6 +216,24 @@ def test_cache_decr__not_a_number(cache):
         assert str(e) == "Value is not a number."
     else:
         pytest.fail("Decrementing a non-number key did not raise an error.")
+
+
+def test_cache_memorize(cache):
+    @cache.memorize()
+    def func(a: int, b: int) -> int:
+        return a + b
+
+    value1 = func(1, 2)
+    value2 = func(1, 3)
+    assert value1 != value2
+
+    value3 = None
+    try:
+        value3 = func(1, 2)
+    except Exception as e:
+        pytest.fail(str(e))
+
+    assert value1 == value3
 
 
 def test_speed():

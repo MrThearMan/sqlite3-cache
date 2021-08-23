@@ -5,6 +5,7 @@ from threading import local
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Any
+from functools import wraps
 
 
 __all__ = ["Cache"]
@@ -129,6 +130,19 @@ class Cache:
 
     def __setitem__(self, item: str, value: Any) -> None:
         self.set(item, value)
+
+    def __delitem__(self, key):
+        self.delete(key)
+
+    def __contains__(self, key):
+        return self._con.execute(self._check_sql, {"key": key}).fetchone() is not None
+
+    def __enter__(self):
+        self._con  # noqa
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
     def __del__(self):
         self.local.instances = getattr(self.local, "instances", 0) - 1
@@ -310,3 +324,16 @@ class Cache:
 
         self._con.execute(self._update_sql, {"key": key, "value": self._stream(value - delta)})
         self._con.commit()
+
+    def memorize(self, timeout: int = DEFAULT_TIMEOUT):
+        def decorator(func):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                result = self.get(f"{func}-{args}-{kwargs}", obj)
+                if result == obj:
+                    result = func(*args, **kwargs)
+                    self.set(f"{func}-{args}-{kwargs}", result, timeout)
+                return result
+            return wrapper
+        obj = object()
+        return decorator

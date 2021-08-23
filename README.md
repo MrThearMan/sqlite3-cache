@@ -17,6 +17,15 @@ Interface works similarly to [Django's cache interface](https://docs.djangoproje
 with a few additions. Values stay in the cache even if the given timeout is reached, and only gets deleted on the 
 next call to `clear`, or any of these methods: `get`, `get_or_set`, `get_many`, `delete`, or `delete_many` for that key.
 
+Supports indexing:
+- `cache["key"] = "value"`, `cache["key"]`, `del cache["key"]`
+
+Supports membership test: 
+- `"key" in cache`
+
+Can be used as a context manager: 
+- `with Cache() as cache: ...`
+
 ---
 
 #### *Cache(...) → Cache*
@@ -160,5 +169,13 @@ Note that this is not an atomic transaction!
 
 Decrement the value in cache by the given delta.
 Note that this is not an atomic transaction!
+
+---
+
+#### *@cache.memorize()*
+- timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
+
+Save the result of the decorated function in cache. Calls with different
+arguments are saved under different keys.
 
 ---
