@@ -1,14 +1,130 @@
+[tool.poetry]
+name = "sqlite-cache"
+version = "0.1.0"
+description = "Use SQLite as cache."
+authors = [
+    "Matti Lamppu <lamppu.matti.akseli@gmail.com>",
+]
+packages = [
+    { include = "sqlite_cache" },
+]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/MrThearMan/sqlite-cache"
+repository = "https://github.com/MrThearMan/sqlite-cache"
+keywords = [
+    "sqlite",
+    "cache",
+]
+classifiers = [
+    "Environment :: Web Environment",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+]
+include = [
+    "README.md",
+    "LICENSE",
+]
+exclude = [
+    "tests",
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/MrThearMan/sqlite-cache/issues"
+
+[tool.poetry.dependencies]
+python = ">=3.7,<4"
+
+[tool.poetry.dev-dependencies]
+pytest-cov = "^3.0.0"
+tomli = "1.2.3"
+pre-commit = "^2.17.0"
+tox = "^3.24.5"
+tox-gh-actions = "^2.9.1"
+coveralls = "^3.2.0"
+black = "^21.12b0"
+isort = "^5.10.1"
+flake8 = "^4.0.1"
+pylint = "^2.12.2"
+mypy = "^0.931"
+mkdocs = "^1.2.3"
+pymdown-extensions = "^9.1"
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
+line_length = 120
+skip_gitignore = "True"
+lines_after_imports = 2
+
+[tool.pylint.MASTER]
+ignore-paths = [
+    "tests/*",
+    "docs/*",
+    ".venv/*",
+    ".tox/*",
+]
+
+[tool.pylint.messages_control]
+disable = "C0330, C0326, C0114, C0115, C0116, R0801, R0903, R0913, R1721"
+
+[tool.pylint.format]
+max-line-length = "120"
+
+[tool.pylint.miscellaneous]
+notes = "FIXME,XXX,BUG"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = "True"
+warn_unused_configs = "True"
+
 [tool.coverage.run]
 relative_files = true
 
 [tool.coverage.report]
 omit = [
     "tests/*",
+    "docs/*",
+    ".venv/*",
+    ".tox/*",
+]
+exclude_lines = [
+    "if TYPE_CHECKING:",
+    "except ImportError:",
 ]
 
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = py{37, 38, 39, 310}
+isolated_build = true
+
+[gh-actions]
+python =
+    3.7: py37
+    3.8: py38
+    3.9: py39
+    3.10: py310
+
+[testenv]
+whitelist_externals =
+    poetry
+setenv =
+    PYTHONPATH = {toxinidir}
+commands =
+    poetry install
+    poetry run coverage run -m pytest -vv -s --log-cli-level=INFO
+"""
+
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel",
-]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

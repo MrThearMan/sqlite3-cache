@@ -1,6 +1,8 @@
 import sqlite3
+from time import perf_counter_ns, sleep
+
 import pytest
-from time import sleep, perf_counter_ns
+
 from sqlite_cache.sqlite_cache import Cache
 
 

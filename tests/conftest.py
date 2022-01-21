@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 from sqlite_cache.sqlite_cache import Cache
 
 
