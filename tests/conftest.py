@@ -1,21 +1,19 @@
-import os
-
 import pytest
 
-from sqlite_cache.sqlite_cache import Cache
+from sqlite_cache import Cache
 
 
 @pytest.fixture(scope="session", autouse=True)
-def cache():
-    if os.path.exists(".cache"):
-        os.remove(".cache")
-
+def cache_create():
     cache = Cache()
     yield cache
     cache.close()
 
-    if os.path.exists(".cache"):
-        os.remove(".cache")
+
+@pytest.fixture
+def cache(cache_create):
+    yield cache_create
+    cache_create.clear()
 
 
 @pytest.fixture(autouse=True)

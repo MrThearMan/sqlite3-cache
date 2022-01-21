@@ -3,7 +3,7 @@ from time import perf_counter_ns, sleep
 
 import pytest
 
-from sqlite_cache.sqlite_cache import Cache
+from sqlite_cache import Cache
 
 
 def test_cache_creation(cache):
@@ -59,7 +59,7 @@ def test_cache_contains(cache):
 
 def test_cache_value_is_available(cache):
     cache.set("foo", "bar", 1)
-    sleep(0.9)
+    sleep(0.6)
     assert cache.get("foo") == "bar"
 
 
@@ -238,6 +238,7 @@ def test_cache_memorize(cache):
     assert value1 == value3
 
 
+@pytest.mark.skip("this is a benchmark")
 def test_speed():
     start = perf_counter_ns()
     cache = Cache()
@@ -274,10 +275,10 @@ def test_speed():
     get_ = sum(get_) / len(get_) / 1000
     del_ = sum(del_) / len(del_) / 1000
 
-    print(f"\n\n Cache creation: {creation} μs\n")
+    print(f"\n\n Cache creation: {creation} us\n")
     print(f" Average of {times:_}:")
     print("--------------------------------------------")
-    print(f" Set: {set_:.01f}μs - Min: {set_min:.01f}μs - Max: {set_max:.01f}μs")
-    print(f" Get: {get_:.01f}μs - Min: {get_min:.01f}μs - Max: {get_max:.01f}μs")
-    print(f" Del: {del_:.01f}μs - Min: {del_min:.01f}μs - Max: {del_max:.01f}μs")
+    print(f" Set: {set_:.01f}us - Min: {set_min:.01f}us - Max: {set_max:.01f}us")
+    print(f" Get: {get_:.01f}us - Min: {get_min:.01f}us - Max: {get_max:.01f}us")
+    print(f" Del: {del_:.01f}us - Min: {del_min:.01f}us - Max: {del_max:.01f}us")
     print("--------------------------------------------")
