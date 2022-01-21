@@ -3,7 +3,7 @@ from time import perf_counter_ns, sleep
 
 import pytest
 
-from sqlite_cache import Cache
+from sqlite3_cache import Cache
 
 
 def test_cache_creation(cache):

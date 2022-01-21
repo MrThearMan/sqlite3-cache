@@ -1,6 +1,6 @@
 import pytest
 
-from sqlite_cache import Cache
+from sqlite3_cache import Cache
 
 
 @pytest.fixture(scope="session", autouse=True)

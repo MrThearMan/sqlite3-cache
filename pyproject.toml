@@ -1,19 +1,20 @@
 [tool.poetry]
-name = "sqlite-cache"
+name = "sqlite3-cache"
 version = "0.1.0"
-description = "Use SQLite as cache."
+description = "Use SQLite3 as cache."
 authors = [
     "Matti Lamppu <lamppu.matti.akseli@gmail.com>",
 ]
 packages = [
-    { include = "sqlite_cache" },
+    { include = "sqlite3_cache" },
 ]
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/MrThearMan/sqlite-cache"
-repository = "https://github.com/MrThearMan/sqlite-cache"
+homepage = "https://github.com/MrThearMan/sqlite3-cache"
+repository = "https://github.com/MrThearMan/sqlite3-cache"
 keywords = [
     "sqlite",
+    "sqlite3",
     "cache",
 ]
 classifiers = [
@@ -36,7 +37,7 @@ exclude = [
 ]
 
 [tool.poetry.urls]
-"Bug Tracker" = "https://github.com/MrThearMan/sqlite-cache/issues"
+"Bug Tracker" = "https://github.com/MrThearMan/sqlite3-cache/issues"
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4"
