@@ -15,7 +15,7 @@ class Cache:
 
     DEFAULT_TIMEOUT = 300
     DEFAULT_PRAGMA = {
-        "mmap_size": 2 ** 26,  # https://www.sqlite.org/pragma.html#pragma_mmap_size
+        "mmap_size": 2**26,  # https://www.sqlite.org/pragma.html#pragma_mmap_size
         "cache_size": 8192,  # https://www.sqlite.org/pragma.html#pragma_cache_size
         "wal_autocheckpoint": 1000,  # https://www.sqlite.org/pragma.html#pragma_wal_autocheckpoint
         "auto_vacuum": "none",  # https://www.sqlite.org/pragma.html#pragma_auto_vacuum
