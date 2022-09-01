@@ -1,7 +1,9 @@
 site_name: Sqlite Cache
+
 nav:
   - Home: index.md
   - API Reference: ref.md
+
 theme:
   name: readthedocs
   highlightjs: true
