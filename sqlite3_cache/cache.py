@@ -8,6 +8,12 @@ from threading import local
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
+
+
 __all__ = ["Cache"]
 
 
@@ -26,49 +32,51 @@ class Cache:
         "temp_store": "memory",  # https://www.sqlite.org/pragma.html#pragma_temp_store
     }
 
-    _create_sql = "CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, value BLOB, exp FLOAT)"
-    _create_index_sql = "CREATE UNIQUE INDEX IF NOT EXISTS cache_key ON cache(key)"
-    _set_pragma = "PRAGMA {}"
-    _set_pragma_equal = "PRAGMA {}={}"
+    _transaction_sql = "BEGIN EXCLUSIVE TRANSACTION; {} COMMIT TRANSACTION;"
+
+    _create_sql = "CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, value BLOB, exp FLOAT);"
+    _create_index_sql = "CREATE UNIQUE INDEX IF NOT EXISTS cache_key ON cache(key);"
+    _set_pragma = "PRAGMA {};"
+    _set_pragma_equal = "PRAGMA {}={};"
 
     _add_sql = (
         "INSERT INTO cache (key, value, exp) VALUES (:key, :value, :exp) "
         "ON CONFLICT(key) DO UPDATE SET value = :value, exp = :exp "
-        "WHERE (exp <> -1.0 AND DATETIME(exp, 'unixepoch') <= DATETIME('now'))"
+        "WHERE (exp <> -1.0 AND DATETIME(exp, 'unixepoch') <= DATETIME('now'));"
     )
-    _get_sql = "SELECT value, exp FROM cache WHERE key = :key"
+    _get_sql = "SELECT value, exp FROM cache WHERE key = :key;"
     _set_sql = (
         "INSERT INTO cache (key, value, exp) VALUES (:key, :value, :exp) "
-        "ON CONFLICT(key) DO UPDATE SET value = :value, exp = :exp"
+        "ON CONFLICT(key) DO UPDATE SET value = :value, exp = :exp;"
     )
     _check_sql = (
         "SELECT value, exp FROM cache WHERE key = :key "
-        "AND (exp = -1.0 OR DATETIME(exp, 'unixepoch') > DATETIME('now'))"
+        "AND (exp = -1.0 OR DATETIME(exp, 'unixepoch') > DATETIME('now'));"
     )
     _update_sql = (
         "UPDATE cache SET value = :value WHERE key = :key "
-        "AND (exp = -1.0 OR DATETIME(exp, 'unixepoch') > DATETIME('now'))"
+        "AND (exp = -1.0 OR DATETIME(exp, 'unixepoch') > DATETIME('now'));"
     )
 
     # TODO: add 'RETURNING COUNT(*)!=0' to these when sqlite3 version >=3.35.0
-    _delete_sql = "DELETE FROM cache WHERE key = :key"
+    _delete_sql = "DELETE FROM cache WHERE key = :key;"
     _touch_sql = (
         "UPDATE cache SET exp = :exp WHERE key = :key "
-        "AND (exp = -1.0 OR DATETIME(exp, 'unixepoch') > DATETIME('now'))"
+        "AND (exp = -1.0 OR DATETIME(exp, 'unixepoch') > DATETIME('now'));"
     )
-    _clear_sql = "DELETE FROM cache"
+    _clear_sql = "DELETE FROM cache;"
 
     _add_many_sql = (
         "INSERT INTO cache (key, value, exp) VALUES {}"
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value, exp = excluded.exp "
-        "WHERE (exp <> -1.0 AND DATETIME(exp, 'unixepoch') <= DATETIME('now'))"
+        "WHERE (exp <> -1.0 AND DATETIME(exp, 'unixepoch') <= DATETIME('now'));"
     )
-    _get_many_sql = "SELECT key, value, exp FROM cache WHERE key IN ({})"
+    _get_many_sql = "SELECT key, value, exp FROM cache WHERE key IN ({});"
     _set_many_sql = (
         "INSERT INTO cache (key, value, exp) VALUES {}"
-        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, exp = excluded.exp"
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, exp = excluded.exp;"
     )
-    _delete_many_sql = "DELETE FROM cache WHERE key IN ({})"
+    _delete_many_sql = "DELETE FROM cache WHERE key IN ({});"
 
     def __init__(
         self,
@@ -77,6 +85,7 @@ class Cache:
         path: str = None,
         in_memory: bool = True,
         timeout: int = 5,
+        isolation_level: Optional[Literal["DEFERRED", "IMMEDIATE", "EXCLUSIVE"]] = "DEFERRED",
         **kwargs,
     ):
         """Create a cache using sqlite3.
@@ -85,6 +94,9 @@ class Cache:
         :param path: Path string to the wanted db location. If None, use current directory.
         :param in_memory: Create database in-memory only. A file is still created, but nothing is stored in it.
         :param timeout: Cache connection timeout.
+        :param isolation_level: Controls the transaction handling performed by sqlite3.
+                                If set to None, transactions are never implicitly opened.
+                                https://www.sqlite.org/lang_transaction.html
         :param kwargs: Pragma settings. https://www.sqlite.org/pragma.html
         """
 
@@ -93,6 +105,7 @@ class Cache:
         self.connection_string = f"{filepath}{suffix}"
         self.pragma = {**kwargs, **self.DEFAULT_PRAGMA}
         self.timeout = timeout
+        self.isolation_level = isolation_level
         self.local = local()
         self.local.instances = getattr(self.local, "instances", 0) + 1
 
@@ -105,7 +118,11 @@ class Cache:
         try:
             return self.local.con
         except AttributeError:
-            self.local.con = sqlite3.connect(self.connection_string, timeout=self.timeout)
+            self.local.con = sqlite3.connect(
+                self.connection_string,
+                timeout=self.timeout,
+                isolation_level=self.isolation_level,
+            )
             self._apply_pragma()
             return self.local.con
 
