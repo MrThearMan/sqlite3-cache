@@ -6,11 +6,13 @@ import pytest
 from sqlite3_cache import Cache
 
 
-def test_cache_creation(cache):
+def test_cache_creation(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
     assert cache.connection_string == ".cache:?mode=memory&cache=shared"
 
 
-def test_cache_method_failed(cache):
+def test_cache_method_failed(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
     try:
         cache.set(object(), object())  # noqa
     except sqlite3.InterfaceError:
@@ -19,17 +21,20 @@ def test_cache_method_failed(cache):
         pytest.fail("Setting to key object() did not raise an error.")
 
 
-def test_cache_set_and_get(cache):
-    cache.set("foo", "bar")
+def test_cache_set_and_get(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=1)
     assert cache.get("foo") == "bar"
 
 
-def test_cache_getitem_and_setitem(cache):
+def test_cache_getitem_and_setitem(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
     cache["foo"] = "bar"
     assert cache["foo"] == "bar"
 
 
-def test_cache_getitem_keyerror(cache):
+def test_cache_getitem_key_error(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
     try:
         cache["foo"]
     except KeyError as e:
@@ -38,13 +43,15 @@ def test_cache_getitem_keyerror(cache):
         pytest.fail("Accessing a key not in cache did not raise a KeyError.")
 
 
-def test_cache_delitem(cache):
+def test_cache_delitem(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
     cache["foo"] = "bar"
     del cache["foo"]
     assert cache.get("foo") is None
 
 
-def test_cache_context_manager(cache):
+def test_cache_context_manager(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
     cache["foo"] = "bar"
     cache.close()
     with Cache() as cache:
@@ -57,121 +64,218 @@ def test_cache_contains(cache):
     assert ("foo" in cache) is True
 
 
-def test_cache_value_is_available(cache):
-    cache.set("foo", "bar", 1)
-    sleep(0.6)
+def test_cache_value_is_available(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=2)
+    freezer.move_to("2022-01-01T00:00:01+00:00")
     assert cache.get("foo") == "bar"
 
 
-def test_cache_value_not_available(cache):
-    cache.set("foo", "bar", 1)
-    sleep(1.1)
+def test_cache_value_not_available(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=1)
+    freezer.move_to("2022-01-01T00:00:01+00:00")
     assert cache.get("foo") is None
 
 
-def test_cache_add_and_get(cache):
-    cache.add("foo", "bar")
+def test_cache_value_not_set(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    assert cache.get("foo") is None
+
+
+def test_cache_value_does_not_expire(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=-1)
+    freezer.move_to("9999-01-01T00:00:00+00:00")
+    assert cache.get("foo") == "bar"
+
+
+def test_cache_add_and_get(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.add("foo", "bar", timeout=1)
     assert cache.get("foo") == "bar"
 
 
 def test_cache_add_same_twice_and_get(cache):
-    cache.add("foo", "bar")
-    cache.add("foo", "baz")
+    cache.add("foo", "bar", timeout=1)
+    cache.add("foo", "baz", timeout=1)
     assert cache.get("foo") == "bar"
 
 
-def test_cache_get_default_if_not_exists(cache):
+def test_cache_add_same_twice_and_get__has_expired(cache):
+    cache.add("foo", "bar", timeout=1)
+    cache.add("foo", "baz", timeout=1)
+    assert cache.get("foo") == "bar"
+    sleep(1.1)
+    cache.add("foo", "baz", timeout=1)
+    assert cache.get("foo") == "baz"
+
+
+def test_cache_add_same_twice_and_get__non_expiring(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.add("foo", "bar", timeout=-1)
+    cache.add("foo", "baz", timeout=-1)
+    assert cache.get("foo") == "bar"
+
+
+def test_cache_get_default_if_not_exists(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
     assert cache.get("foo", "bar") == "bar"
 
 
 def test_cache_update(cache):
-    cache.set("foo", "bar")
+    cache.set("foo", "bar", timeout=10)
     cache.update("foo", "baz")
     assert cache.get("foo") == "baz"
 
 
-def test_cache_delete(cache):
-    cache.set("foo", "bar")
+def test_cache_update__non_expiring(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=-1)
+    cache.update("foo", "baz")
+    assert cache.get("foo") == "baz"
+
+
+def test_cache_update__does_not_exist(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.update("foo", "baz")
+    assert cache.get("foo") is None
+
+
+def test_cache_delete(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=1)
     cache.delete("foo")
     assert cache.get("foo") is None
 
 
-def test_cache_get_or_set(cache):
-    cache.get_or_set("foo", "bar")
+def test_cache_delete__nothing(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.delete("foo")
+    assert cache.get("foo") is None
+
+
+def test_cache_get_or_set(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=2)
+    freezer.move_to("2022-01-01T00:00:01+00:00")
     assert cache.get_or_set("foo", None) == "bar"
 
 
-def test_cache_get_or_set__expired(cache):
-    cache.get_or_set("foo", "bar", 1)
-    sleep(1.1)
+def test_cache_get_or_set__expired(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=1)
+    freezer.move_to("2022-01-01T00:00:01+00:00")
     assert cache.get_or_set("foo", None) is None
 
 
-def test_cache_get_many(cache):
-    cache.set("foo", "bar")
-    cache.set("one", "two")
+def test_cache_get_many(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=2)
+    cache.set("one", "two", timeout=2)
+    freezer.move_to("2022-01-01T00:00:01+00:00")
     assert cache.get_many(["foo", "one"]) == {"foo": "bar", "one": "two"}
 
 
-def test_cache_get_many__nothing(cache):
-    cache.set("foo", "bar")
-    cache.set("one", "two")
-    assert cache.get_many(["three", "four"]) == {}
-
-
-def test_cache_get_many__expired(cache):
-    cache.set("foo", "bar", 1)
-    cache.set("one", "two", 1)
-    sleep(1.1)
+def test_cache_get_many__expired(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=1)
+    cache.set("one", "two", timeout=1)
+    freezer.move_to("2022-01-01T00:00:01+00:00")
     assert cache.get_many(["foo", "one"]) == {}
 
 
-def test_cache_set_many(cache):
-    cache.set_many({"foo": "bar", "one": "two"})
+def test_cache_get_many__nothing(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=1)
+    cache.set("one", "two", timeout=1)
+    assert cache.get_many(["three", "four"]) == {}
+
+
+def test_cache_set_many(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set_many({"foo": "bar", "one": "two"}, timeout=2)
+    freezer.move_to("2022-01-01T00:00:01+00:00")
     assert cache.get_many(["foo", "one"]) == {"foo": "bar", "one": "two"}
+
+
+def test_cache_set_many__expired(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set_many({"foo": "bar", "one": "two"}, timeout=1)
+    freezer.move_to("2022-01-01T00:00:01+00:00")
+    assert cache.get_many(["foo", "one"]) == {}
 
 
 def test_cache_add_many(cache):
-    cache.set("foo", "bar")
-    cache.add_many({"foo": "baz", "one": "two"})
+    cache.set("foo", "bar", timeout=10)
+    cache.add_many({"foo": "baz", "one": "two"}, timeout=10)
     assert cache.get_many(["foo", "one"]) == {"foo": "bar", "one": "two"}
 
 
+def test_cache_add_many__expired(cache):
+    cache.set("foo", "bar", timeout=1)
+    sleep(1.1)
+    cache.add_many({"foo": "baz", "one": "two"}, timeout=1)
+    assert cache.get_many(["foo", "one"]) == {"foo": "baz", "one": "two"}
+
+
 def test_cache_update_many(cache):
-    cache.set_many({"foo": "bar", "one": "two"})
+    cache.set_many({"foo": "bar", "one": "two"}, timeout=10)
     cache.update_many({"foo": "baz", "three": "four"})
     assert cache.get_many(["foo", "one"]) == {"foo": "baz", "one": "two"}
     assert cache.get("three") is None
 
 
-def test_cache_delte_many(cache):
-    cache.set_many({"foo": "bar", "one": "two"})
+def test_cache_delete_many(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set_many({"foo": "bar", "one": "two"}, timeout=1)
+    cache.delete_many(["foo", "one"])
+    assert cache.get_many(["foo", "one"]) == {}
+
+
+def test_cache_delete_many__nothing(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
     cache.delete_many(["foo", "one"])
     assert cache.get_many(["foo", "one"]) == {}
 
 
 def test_cache_touch(cache):
-    cache.set("foo", "bar", 1)
-    cache.touch("foo")
+    cache.set("foo", "bar", timeout=1)
+    cache.touch("foo", timeout=3)
+    sleep(1.1)
+    assert cache.get("foo") == "bar"
+
+
+def test_cache_touch__make_expiring(cache):
+    cache.set("foo", "bar", timeout=-10)
+    cache.touch("foo", timeout=1)
+    sleep(1.1)
+    assert cache.get("foo") is None
+
+
+def test_cache_touch__non_expiring(cache):
+    cache.set("foo", "bar", timeout=1)
+    cache.touch("foo", timeout=-1)
     sleep(1.1)
     assert cache.get("foo") == "bar"
 
 
 def test_cache_touch_many(cache):
-    cache.set_many({"foo": "bar", "one": "two"}, 1)
-    cache.touch_many(["foo", "one"])
+    cache.set_many({"foo": "bar", "one": "two"}, timeout=1)
+    cache.touch_many(["foo", "one"], timeout=3)
     sleep(1.1)
     assert cache.get_many(["foo", "one"]) == {"foo": "bar", "one": "two"}
 
 
-def test_cache_clear(cache):
-    cache.set("foo", "bar")
+def test_cache_clear(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=1)
     cache.clear()
     assert cache.get("foo") is None
 
 
 def test_cache_incr(cache):
-    cache.set("foo", 1)
+    cache.set("foo", 1, timeout=10)
     cache.incr("foo")
     assert cache.get("foo") == 2
 
@@ -186,7 +290,7 @@ def test_cache_incr__not_exists(cache):
 
 
 def test_cache_incr__not_a_number(cache):
-    cache.set("foo", "bar")
+    cache.set("foo", "bar", timeout=10)
     try:
         cache.incr("foo")
     except ValueError as e:
@@ -196,7 +300,7 @@ def test_cache_incr__not_a_number(cache):
 
 
 def test_cache_decr(cache):
-    cache.set("foo", 1)
+    cache.set("foo", 1, timeout=10)
     cache.decr("foo")
     assert cache.get("foo") == 0
 
@@ -211,7 +315,7 @@ def test_cache_decr__not_exists(cache):
 
 
 def test_cache_decr__not_a_number(cache):
-    cache.set("foo", "bar")
+    cache.set("foo", "bar", timeout=10)
     try:
         cache.decr("foo")
     except ValueError as e:
@@ -220,8 +324,10 @@ def test_cache_decr__not_a_number(cache):
         pytest.fail("Decrementing a non-number key did not raise an error.")
 
 
-def test_cache_memorize(cache):
-    @cache.memorize()
+def test_cache_memoize(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+
+    @cache.memoize()
     def func(a: int, b: int) -> int:
         return a + b
 
@@ -236,6 +342,31 @@ def test_cache_memorize(cache):
         pytest.fail(str(e))
 
     assert value1 == value3
+
+
+def test_cache_ttl(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=10)
+    assert cache.ttl("foo") == 10
+
+
+def test_cache_ttl__not_exists(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    assert cache.ttl("foo") == -2
+
+
+def test_cache_ttl__expired(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=1)
+    freezer.move_to("2022-01-01T00:00:01+00:00")
+    assert cache.ttl("foo") == -2
+
+
+def test_cache_ttl__non_expiring(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=-1)
+    freezer.move_to("9999-01-01T00:00:00+00:00")
+    assert cache.ttl("foo") == -1
 
 
 @pytest.mark.skip("this is a benchmark")

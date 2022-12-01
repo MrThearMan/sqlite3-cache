@@ -5,14 +5,16 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 from threading import local
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 __all__ = ["Cache"]
 
 
 class Cache:
+    """Simple SQLite Cache."""
 
+    PICKLE_PROTOCOL = pickle.HIGHEST_PROTOCOL
     DEFAULT_TIMEOUT = 300
     DEFAULT_PRAGMA = {
         "mmap_size": 2**26,  # https://www.sqlite.org/pragma.html#pragma_mmap_size
@@ -32,25 +34,34 @@ class Cache:
     _add_sql = (
         "INSERT INTO cache (key, value, exp) VALUES (:key, :value, :exp) "
         "ON CONFLICT(key) DO UPDATE SET value = :value, exp = :exp "
-        "WHERE DATETIME(exp, 'unixepoch') <= DATETIME('now')"
+        "WHERE (exp <> -1.0 AND DATETIME(exp, 'unixepoch') <= DATETIME('now'))"
     )
     _get_sql = "SELECT value, exp FROM cache WHERE key = :key"
     _set_sql = (
         "INSERT INTO cache (key, value, exp) VALUES (:key, :value, :exp) "
         "ON CONFLICT(key) DO UPDATE SET value = :value, exp = :exp"
     )
-    _check_sql = "SELECT value, exp FROM cache WHERE key = :key AND DATETIME(exp, 'unixepoch') > DATETIME('now')"
-    _update_sql = "UPDATE cache SET value = :value WHERE key = :key AND DATETIME(exp, 'unixepoch') > DATETIME('now')"
+    _check_sql = (
+        "SELECT value, exp FROM cache WHERE key = :key "
+        "AND (exp = -1.0 OR DATETIME(exp, 'unixepoch') > DATETIME('now'))"
+    )
+    _update_sql = (
+        "UPDATE cache SET value = :value WHERE key = :key "
+        "AND (exp = -1.0 OR DATETIME(exp, 'unixepoch') > DATETIME('now'))"
+    )
 
     # TODO: add 'RETURNING COUNT(*)!=0' to these when sqlite3 version >=3.35.0
     _delete_sql = "DELETE FROM cache WHERE key = :key"
-    _touch_sql = "UPDATE cache SET exp = :exp WHERE key = :key AND DATETIME(exp, 'unixepoch') > DATETIME('now')"
+    _touch_sql = (
+        "UPDATE cache SET exp = :exp WHERE key = :key "
+        "AND (exp = -1.0 OR DATETIME(exp, 'unixepoch') > DATETIME('now'))"
+    )
     _clear_sql = "DELETE FROM cache"
 
     _add_many_sql = (
         "INSERT INTO cache (key, value, exp) VALUES {}"
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value, exp = excluded.exp "
-        "WHERE DATETIME(exp, 'unixepoch') <= DATETIME('now')"
+        "WHERE (exp <> -1.0 AND DATETIME(exp, 'unixepoch') <= DATETIME('now'))"
     )
     _get_many_sql = "SELECT key, value, exp FROM cache WHERE key IN ({})"
     _set_many_sql = (
@@ -126,7 +137,8 @@ class Cache:
             self.close()
 
     def close(self) -> None:
-        self._con.execute(self._set_pragma.format("optimize"))
+        """Closes the cache."""
+        self._con.execute(self._set_pragma.format("optimize"))  # https://www.sqlite.org/pragma.html#pragma_optimize
         self._con.close()
         with suppress(AttributeError):
             delattr(self.local, "con")
@@ -137,30 +149,48 @@ class Cache:
 
     @staticmethod
     def _exp_timestamp(timeout: int = DEFAULT_TIMEOUT) -> float:
-        return (datetime.now(timezone.utc) + timedelta(seconds=timeout)).timestamp()
+        if timeout < 0:
+            return -1.0
+        return (datetime.now(tz=timezone.utc) + timedelta(seconds=timeout)).timestamp()
 
     @staticmethod
-    def _stream(value: Any) -> bytes:
-        return pickle.dumps(value, protocol=pickle.HIGHEST_PROTOCOL)
+    def _exp_datetime(exp: float) -> Optional[datetime]:
+        if exp == -1.0:
+            return None
+        return datetime.utcfromtimestamp(exp)
 
-    @staticmethod
-    def _unstream(value: bytes) -> Any:
+    def _stream(self, value: Any) -> bytes:
+        return pickle.dumps(value, protocol=self.PICKLE_PROTOCOL)
+
+    def _unstream(self, value: bytes) -> Any:
         return pickle.loads(value)
 
     def add(self, key: str, value: Any, timeout: int = DEFAULT_TIMEOUT) -> None:
+        """Set the value to the cache only if the key is not already in the cache,
+        or the found value has expired.
+
+        :param key: Cache key.
+        :param value: Picklable object to store.
+        :param timeout: How long the value is valid in the cache.
+                        Negative numbers will keep the key in cache until manually removed.
+        """
         data = {"key": key, "value": self._stream(value), "exp": self._exp_timestamp(timeout)}
         self._con.execute(self._add_sql, data)
         self._con.commit()
 
     def get(self, key: str, default: Any = None) -> Any:
-        result: Optional[tuple] = self._con.execute(self._get_sql, {"key": key}).fetchone()
+        """Get the value under some key. Return `default` if key not in the cache or expired.
+
+        :param key: Cache key.
+        :param default: Value to return if key not in the cache.
+        """
+        result: Optional[Tuple[bytes, float]] = self._con.execute(self._get_sql, {"key": key}).fetchone()
 
         if result is None:
             return default
 
-        exp = datetime.utcfromtimestamp(result[1])
-
-        if datetime.utcnow() >= exp:
+        exp = self._exp_datetime(result[1])
+        if exp is not None and datetime.utcnow() >= exp:
             self._con.execute(self._delete_sql, {"key": key})
             self._con.commit()
             return default
@@ -168,25 +198,54 @@ class Cache:
         return self._unstream(result[0])
 
     def set(self, key: str, value: Any, timeout: int = DEFAULT_TIMEOUT) -> None:
+        """Set a value in cache under some key.
+
+        :param key: Cache key.
+        :param value: Picklable object to store.
+        :param timeout: How long the value is valid in the cache.
+                        Negative numbers will keep the key in cache until manually removed.
+        """
         data = {"key": key, "value": self._stream(value), "exp": self._exp_timestamp(timeout)}
         self._con.execute(self._set_sql, data)
         self._con.commit()
 
     def update(self, key: str, value: Any) -> None:
+        """Update value in the cache. Does nothing if key not in the cache or expired.
+
+        :param key: Cache key.
+        :param value: Picklable object to store.
+        """
         data = {"key": key, "value": self._stream(value)}
         self._con.execute(self._update_sql, data)
         self._con.commit()
 
     def touch(self, key: str, timeout: int = DEFAULT_TIMEOUT) -> None:
+        """Extend the lifetime of an object in cache. Does nothing if key is not in the cache or is expired.
+
+        :param key: Cache key.
+        :param timeout: How long the value is valid in the cache.
+                        Negative numbers will keep the key in cache until manually removed.
+        """
         data = {"exp": self._exp_timestamp(timeout), "key": key}
         self._con.execute(self._touch_sql, data)
         self._con.commit()
 
     def delete(self, key: str) -> None:
+        """Remove the value under the given key from the cache. Does nothing if key is not in the cache.
+
+        :param key: Cache key.
+        """
         self._con.execute(self._delete_sql, {"key": key})
         self._con.commit()
 
-    def add_many(self, dict_: dict, timeout: int = DEFAULT_TIMEOUT) -> None:
+    def add_many(self, dict_: Dict[str, Any], timeout: int = DEFAULT_TIMEOUT) -> None:
+        """For all keys in the given dict, add the value to the cache only if the key is not
+        already in the cache, or the found value has expired.
+
+        :param dict_: Cache keys with values to add.
+        :param timeout: How long the value is valid in the cache.
+                        Negative numbers will keep the key in cache until manually removed.
+        """
         command = self._add_many_sql.format(", ".join([f"(:key{n}, :value{n}, :exp{n})" for n in range(len(dict_))]))
 
         data = {}
@@ -199,7 +258,11 @@ class Cache:
         self._con.execute(command, data)
         self._con.commit()
 
-    def get_many(self, keys: list) -> dict:
+    def get_many(self, keys: List[str]) -> Dict[str, Any]:
+        """Get all values that exist and aren't expired from the given cache keys, and return a dict.
+
+        :param keys: List of cache keys.
+        """
         seq = ", ".join([f"'{value}'" for value in keys])
         fetched: list = self._con.execute(self._get_many_sql.format(seq)).fetchall()
 
@@ -209,9 +272,8 @@ class Cache:
         results = {}
         to_delete = []
         for key, value, exp in fetched:
-            exp = datetime.utcfromtimestamp(exp)
-
-            if datetime.utcnow() >= exp:
+            exp = self._exp_datetime(exp)
+            if exp is not None and datetime.utcnow() >= exp:
                 to_delete.append(key)
                 continue
 
@@ -223,7 +285,13 @@ class Cache:
 
         return results
 
-    def set_many(self, dict_: dict, timeout: int = DEFAULT_TIMEOUT) -> None:
+    def set_many(self, dict_: Dict[str, Any], timeout: int = DEFAULT_TIMEOUT) -> None:
+        """Set values to the cache for all keys in the given dict.
+
+        :param dict_: Cache keys with values to set.
+        :param timeout: How long the value is valid in the cache.
+                        Negative numbers will keep the key in cache until manually removed.
+        """
         command = self._set_many_sql.format(", ".join([f"(:key{n}, :value{n}, :exp{n})" for n in range(len(dict_))]))
 
         data = {}
@@ -236,28 +304,49 @@ class Cache:
         self._con.execute(command, data)
         self._con.commit()
 
-    def update_many(self, dict_: dict) -> None:
+    def update_many(self, dict_: Dict[str, Any]) -> None:
+        """Update values to the cache for all keys in the given dict. Does nothing if key not in cache or expired.
+
+        :param dict_:Cache keys with values to update to.
+        """
         seq = [{"key": key, "value": self._stream(value)} for key, value in dict_.items()]
         self._con.executemany(self._update_sql, seq)
         self._con.commit()
 
-    def touch_many(self, keys: list, timeout: int = DEFAULT_TIMEOUT) -> None:
+    def touch_many(self, keys: List[str], timeout: int = DEFAULT_TIMEOUT) -> None:
+        """Extend the lifetime for all objects under the given keys in cache.
+        Does nothing if a key is not in the cache or is expired.
+
+        :param keys: List of cache keys.
+        :param timeout: How long the value is valid in the cache.
+                        Negative numbers will keep the key in cache until manually removed.
+        """
         exp = self._exp_timestamp(timeout)
         seq = [{"key": key, "exp": exp} for key in keys]
         self._con.executemany(self._touch_sql, seq)
         self._con.commit()
 
-    def delete_many(self, keys: list) -> None:
+    def delete_many(self, keys: List[str]) -> None:
+        """Remove all the values under the given keys from the cache.
+
+        :param keys: List of cache keys.
+        """
         self._con.execute(self._delete_many_sql.format(", ".join([f"'{value}'" for value in keys])))
         self._con.commit()
 
     def get_or_set(self, key: str, default: Any, timeout: int = DEFAULT_TIMEOUT) -> Any:
-        result: Optional[tuple] = self._con.execute(self._get_sql, {"key": key}).fetchone()
+        """Get a value under some key, or set the default if key is not in cache.
+
+        :param key: Cache key.
+        :param default: Picklable object to store if key is not in cache.
+        :param timeout: How long the value is valid in the cache.
+                        Negative numbers will keep the key in cache until manually removed.
+        """
+        result: Optional[Tuple[bytes, float]] = self._con.execute(self._get_sql, {"key": key}).fetchone()
 
         if result is not None:
-            exp = datetime.utcfromtimestamp(result[1])
-
-            if datetime.utcnow() >= exp:
+            exp = self._exp_datetime(result[1])
+            if exp is not None and datetime.utcnow() >= exp:
                 self._con.execute(self._delete_sql, {"key": key})
             else:
                 return self._unstream(result[0])
@@ -268,11 +357,18 @@ class Cache:
         return default
 
     def clear(self) -> None:
+        """Clear the cache from all values."""
         self._con.execute(self._clear_sql)
         self._con.commit()
 
     def incr(self, key: str, delta: int = 1) -> None:
-        result: Optional[tuple] = self._con.execute(self._check_sql, {"key": key}).fetchone()
+        """Increment the value in cache by the given delta.
+        Note that this is not an atomic transaction!
+
+        :param key: Cache key.
+        :param delta: How much to increment.
+        """
+        result: Optional[Tuple[bytes, float]] = self._con.execute(self._check_sql, {"key": key}).fetchone()
 
         if result is None:
             raise ValueError("Nonexistent or expired cache key.")
@@ -285,7 +381,13 @@ class Cache:
         self._con.commit()
 
     def decr(self, key: str, delta: int = 1) -> None:
-        result: Optional[tuple] = self._con.execute(self._check_sql, {"key": key}).fetchone()
+        """Decrement the value in cache by the given delta.
+        Note that this is not an atomic transaction!
+
+        :param key: Cache key.
+        :param delta: How much to decrement.
+        """
+        result: Optional[Tuple[bytes, float]] = self._con.execute(self._check_sql, {"key": key}).fetchone()
 
         if result is None:
             raise ValueError("Nonexistent or expired cache key.")
@@ -297,7 +399,14 @@ class Cache:
         self._con.execute(self._update_sql, {"key": key, "value": self._stream(value - delta)})
         self._con.commit()
 
-    def memorize(self, timeout: int = DEFAULT_TIMEOUT):
+    def memoize(self, timeout: int = DEFAULT_TIMEOUT):
+        """Save the result of the decorated function in cache. Calls with different
+        arguments are saved under different keys.
+
+        :param timeout: How long the value is valid in the cache.
+                        Negative numbers will keep the key in cache until manually removed.
+        """
+
         def decorator(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
@@ -311,3 +420,29 @@ class Cache:
 
         obj = object()
         return decorator
+
+    memorize = memoize  # for backwards compatibility
+
+    def ttl(self, key: str) -> int:
+        """How long the key is still valid in the cache in seconds.
+        Returns `-1` if the value for the key does not expire.
+        Returns `-2` if the value for the key has expired, or has not been set.
+
+        :param key: Cache key.
+        """
+        result: Optional[Tuple[bytes, float]] = self._con.execute(self._get_sql, {"key": key}).fetchone()
+
+        if result is None:
+            return -2
+
+        exp = self._exp_datetime(result[1])
+        if exp is None:
+            return -1
+
+        ttl = int((exp - datetime.utcnow()).total_seconds())
+        if ttl <= 0:
+            self._con.execute(self._delete_sql, {"key": key})
+            self._con.commit()
+            return -2
+
+        return ttl

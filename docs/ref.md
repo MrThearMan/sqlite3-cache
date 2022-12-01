@@ -10,8 +10,14 @@
 - kwargs: Pragma settings. https://www.sqlite.org/pragma.html
 
 Create a new cache in the specified location. The class itself is not a singleton, but cache
-intances with the same filename and path will share the same cache, and the latter instance
+instances with the same filename and path will share the same cache, and the latter instance
 will not clear the cache on instantiation.
+
+---
+
+#### *cache.close() → None*
+
+Closes the cache.
 
 ---
 
@@ -19,6 +25,7 @@ will not clear the cache on instantiation.
 - key: str — Cache key.
 - value: Any — Picklable object to store.
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
+  Negative numbers will keep the key in cache until manually removed.
 
 Set the value to the cache only if the key is not already in the cache,
 or the found value has expired.
@@ -37,6 +44,7 @@ Get the value under some key. Return `default` if key not in the cache or expire
 - key: str — Cache key.
 - value: Any — Picklable object to store.
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
+  Negative numbers will keep the key in cache until manually removed.
 
 Set a value in cache under some key.
 
@@ -53,6 +61,7 @@ Update value in the cache. Does nothing if key not in the cache or expired.
 #### *cache.touch(...) → None*
 - key: str — Cache key.
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in cache.
+  Negative numbers will keep the key in cache until manually removed.
 
 Extend the lifetime of an object in cache. Does nothing if key is not in the cache or is expired.
 
@@ -68,6 +77,7 @@ Remove the value under the given key from the cache.
 #### *cache.add_many(...) → None*
 - dict_: dict — Cache keys with values to add.
 - timeout: int = DEFAULT_TIMEOUT — How long the values are valid in the cache.
+  Negative numbers will keep the key in cache until manually removed.
 
 For all keys in the given dict, add the value to the cache only if the key is not
 already in the cache, or the found value has expired.
@@ -84,6 +94,7 @@ Get all values that exist and aren't expired from the given cache keys, and retu
 #### *cache.set_many(...) → None*
 - dict_: dict — Cache keys with values to set.
 - timeout: int = DEFAULT_TIMEOUT — How long the values are valid in the cache.
+  Negative numbers will keep the key in cache until manually removed.
 
 Set values to the cache for all keys in the given dict.
 
@@ -99,6 +110,7 @@ Update values to the cache for all keys in the given dict. Does nothing if key n
 #### *cache.touch_many(...) → None*
 - keys: str — List of cache keys.
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in cache.
+  Negative numbers will keep the key in cache until manually removed.
 
 Extend the lifetime for all objects under the given keys in cache.
 Does nothing if a key is not in the cache or is expired.
@@ -116,6 +128,7 @@ Remove all the values under the given keys from the cache.
 - key: str — Cache key.
 - default: Any — Picklable object to store if key is not in cache.
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
+  Negative numbers will keep the key in cache until manually removed.
 
 Get a value under some key, or set the default if key is not in cache.
 
@@ -127,7 +140,7 @@ Clear the cache from all values.
 
 ---
 
-#### *cache.incr() → None*
+#### *cache.incr(...) → None*
 - key: str — Cache key.
 - delta: int = 1 — How much to increment.
 
@@ -136,7 +149,7 @@ Note that this is not an atomic transaction!
 
 ---
 
-#### *cache.decr() → None*
+#### *cache.decr(...) → None*
 - key: str — Cache key.
 - delta: int = 1 — How much to decrement.
 
@@ -145,10 +158,20 @@ Note that this is not an atomic transaction!
 
 ---
 
-#### *@cache.memorize()*
+#### *@cache.memoize(...)*
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
+  Negative numbers will keep the key in cache until manually removed.
 
 Save the result of the decorated function in cache. Calls with different
 arguments are saved under different keys.
+
+---
+
+#### *@cache.ttl(...)*
+- key: str — Cache key.
+
+How long the key is still valid in the cache in seconds.
+Returns `-1` if the value for the key does not expire.
+Returns `-2` if the value for the key has expired, or has not been set.
 
 ---
