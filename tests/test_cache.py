@@ -15,7 +15,7 @@ def test_cache_method_failed(cache, freezer):
     freezer.move_to("2022-01-01T00:00:00+00:00")
     try:
         cache.set(object(), object())  # noqa
-    except sqlite3.InterfaceError:
+    except sqlite3.Error:
         pass
     else:
         pytest.fail("Setting to key object() did not raise an error.")
@@ -276,8 +276,7 @@ def test_cache_clear(cache, freezer):
 
 def test_cache_incr(cache):
     cache.set("foo", 1, timeout=10)
-    cache.incr("foo")
-    assert cache.get("foo") == 2
+    assert cache.incr("foo") == 2
 
 
 def test_cache_incr__not_exists(cache):
@@ -301,8 +300,7 @@ def test_cache_incr__not_a_number(cache):
 
 def test_cache_decr(cache):
     cache.set("foo", 1, timeout=10)
-    cache.decr("foo")
-    assert cache.get("foo") == 0
+    assert cache.decr("foo") == 0
 
 
 def test_cache_decr__not_exists(cache):
@@ -367,6 +365,33 @@ def test_cache_ttl__non_expiring(cache, freezer):
     cache.set("foo", "bar", timeout=-1)
     freezer.move_to("9999-01-01T00:00:00+00:00")
     assert cache.ttl("foo") == -1
+
+
+def test_cache_ttl_many(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=1)
+    cache.set("one", "two", timeout=2)
+    assert cache.ttl_many(["foo", "one"]) == {"foo": 1, "one": 2}
+
+
+def test_cache_ttl_many__not_exists(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    assert cache.ttl_many(["foo", "one"]) == {"foo": -2, "one": -2}
+
+
+def test_cache_ttl_many__non_expiring(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=-1)
+    cache.set("one", "two", timeout=-2)
+    assert cache.ttl_many(["foo", "one"]) == {"foo": -1, "one": -1}
+
+
+def test_cache_ttl_many__expired(cache, freezer):
+    freezer.move_to("2022-01-01T00:00:00+00:00")
+    cache.set("foo", "bar", timeout=1)
+    cache.set("one", "two", timeout=1)
+    freezer.move_to("2022-01-01T00:00:01+00:00")
+    assert cache.ttl_many(["foo", "one"]) == {"foo": -2, "one": -2}
 
 
 @pytest.mark.skip("this is a benchmark")

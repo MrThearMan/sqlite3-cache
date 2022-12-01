@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 from threading import local
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
 __all__ = ["Cache"]
@@ -264,13 +264,13 @@ class Cache:
         :param keys: List of cache keys.
         """
         seq = ", ".join([f"'{value}'" for value in keys])
-        fetched: list = self._con.execute(self._get_many_sql.format(seq)).fetchall()
+        fetched: List[Tuple[str, Any, float]] = self._con.execute(self._get_many_sql.format(seq)).fetchall()
 
         if not fetched:
             return {}
 
-        results = {}
-        to_delete = []
+        results: Dict[str, Any] = {}
+        to_delete: List[str] = []
         for key, value, exp in fetched:
             exp = self._exp_datetime(exp)
             if exp is not None and datetime.utcnow() >= exp:
@@ -361,12 +361,13 @@ class Cache:
         self._con.execute(self._clear_sql)
         self._con.commit()
 
-    def incr(self, key: str, delta: int = 1) -> None:
+    def incr(self, key: str, delta: int = 1) -> int:
         """Increment the value in cache by the given delta.
         Note that this is not an atomic transaction!
 
         :param key: Cache key.
         :param delta: How much to increment.
+        :raises ValueError: Value cannot be incremented.
         """
         result: Optional[Tuple[bytes, float]] = self._con.execute(self._check_sql, {"key": key}).fetchone()
 
@@ -377,15 +378,18 @@ class Cache:
         if not isinstance(value, int):
             raise ValueError("Value is not a number.")
 
-        self._con.execute(self._update_sql, {"key": key, "value": self._stream(value + delta)})
+        new_value = value + delta
+        self._con.execute(self._update_sql, {"key": key, "value": self._stream(new_value)})
         self._con.commit()
+        return new_value
 
-    def decr(self, key: str, delta: int = 1) -> None:
+    def decr(self, key: str, delta: int = 1) -> int:
         """Decrement the value in cache by the given delta.
         Note that this is not an atomic transaction!
 
         :param key: Cache key.
         :param delta: How much to decrement.
+        :raises ValueError: Value cannot be decremented.
         """
         result: Optional[Tuple[bytes, float]] = self._con.execute(self._check_sql, {"key": key}).fetchone()
 
@@ -396,10 +400,12 @@ class Cache:
         if not isinstance(value, int):
             raise ValueError("Value is not a number.")
 
-        self._con.execute(self._update_sql, {"key": key, "value": self._stream(value - delta)})
+        new_value = value - delta
+        self._con.execute(self._update_sql, {"key": key, "value": self._stream(new_value)})
         self._con.commit()
+        return new_value
 
-    def memoize(self, timeout: int = DEFAULT_TIMEOUT):
+    def memoize(self, timeout: int = DEFAULT_TIMEOUT) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """Save the result of the decorated function in cache. Calls with different
         arguments are saved under different keys.
 
@@ -407,9 +413,9 @@ class Cache:
                         Negative numbers will keep the key in cache until manually removed.
         """
 
-        def decorator(func):
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             @wraps(func)
-            def wrapper(*args, **kwargs):
+            def wrapper(*args, **kwargs) -> Callable[..., Any]:
                 result = self.get(f"{func}-{args}-{kwargs}", obj)
                 if result == obj:
                     result = func(*args, **kwargs)
@@ -446,3 +452,40 @@ class Cache:
             return -2
 
         return ttl
+
+    def ttl_many(self, keys: List[str]) -> Dict[str, int]:
+        """How long the given keys are still valid in the cache in seconds.
+        Returns `-1` if a value for the key does not expire.
+        Returns `-2` if a value for the key has expired, or has not been set.
+
+        :param keys: List of cache keys.
+        """
+        seq = ", ".join([f"'{value}'" for value in keys])
+        fetched: List[Tuple[str, Any, float]] = self._con.execute(self._get_many_sql.format(seq)).fetchall()
+        exp_by_key: Dict[str, float] = {key: exp for key, _, exp in fetched}
+
+        results: Dict[str, int] = {}
+        to_delete: List[str] = []
+        for key in keys:
+            exp_ = exp_by_key.get(key)
+            if exp_ is None:
+                results[key] = -2
+                continue
+
+            exp = self._exp_datetime(exp_)
+            if exp is None:
+                results[key] = -1
+                continue
+
+            if datetime.utcnow() >= exp:
+                to_delete.append(key)
+                results[key] = -2
+                continue
+
+            results[key] = int((exp - datetime.utcnow()).total_seconds())
+
+        if to_delete:
+            self._con.execute(self._delete_many_sql.format(", ".join([f"'{value}'" for value in to_delete])))
+            self._con.commit()
+
+        return results

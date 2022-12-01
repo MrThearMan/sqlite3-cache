@@ -75,7 +75,7 @@ Remove the value under the given key from the cache.
 ---
 
 #### *cache.add_many(...) → None*
-- dict_: dict — Cache keys with values to add.
+- dict_: dict[str, Any] — Cache keys with values to add.
 - timeout: int = DEFAULT_TIMEOUT — How long the values are valid in the cache.
   Negative numbers will keep the key in cache until manually removed.
 
@@ -84,15 +84,15 @@ already in the cache, or the found value has expired.
 
 ---
 
-#### *cache.get_many(...) → dict*
-- keys: str — List of cache keys.
+#### *cache.get_many(...) → dict[str, Any]*
+- keys: list[str] — List of cache keys.
 
 Get all values that exist and aren't expired from the given cache keys, and return a dict.
 
 ---
 
 #### *cache.set_many(...) → None*
-- dict_: dict — Cache keys with values to set.
+- dict_: dict[str, Any] — Cache keys with values to set.
 - timeout: int = DEFAULT_TIMEOUT — How long the values are valid in the cache.
   Negative numbers will keep the key in cache until manually removed.
 
@@ -101,14 +101,14 @@ Set values to the cache for all keys in the given dict.
 ---
 
 #### *cache.update_many(...) → None*
-- dict_: dict — Cache keys with values to update to.
+- dict_: dict[str, Any] — Cache keys with values to update to.
 
 Update values to the cache for all keys in the given dict. Does nothing if key not in cache or expired.
 
 ---
 
 #### *cache.touch_many(...) → None*
-- keys: str — List of cache keys.
+- keys: list[str] — List of cache keys.
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in cache.
   Negative numbers will keep the key in cache until manually removed.
 
@@ -118,7 +118,7 @@ Does nothing if a key is not in the cache or is expired.
 ---
 
 #### *cache.delete_many(...) → None*
-- keys: str — List of cache keys.
+- keys: list[str] — List of cache keys.
 
 Remove all the values under the given keys from the cache.
 
@@ -140,7 +140,7 @@ Clear the cache from all values.
 
 ---
 
-#### *cache.incr(...) → None*
+#### *cache.incr(...) → int*
 - key: str — Cache key.
 - delta: int = 1 — How much to increment.
 
@@ -149,7 +149,7 @@ Note that this is not an atomic transaction!
 
 ---
 
-#### *cache.decr(...) → None*
+#### *cache.decr(...) → int*
 - key: str — Cache key.
 - delta: int = 1 — How much to decrement.
 
@@ -158,7 +158,7 @@ Note that this is not an atomic transaction!
 
 ---
 
-#### *@cache.memoize(...)*
+#### *@cache.memoize(...) -> Callable[..., Any]*
 - timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
   Negative numbers will keep the key in cache until manually removed.
 
@@ -167,11 +167,20 @@ arguments are saved under different keys.
 
 ---
 
-#### *@cache.ttl(...)*
+#### *@cache.ttl(...) -> int*
 - key: str — Cache key.
 
 How long the key is still valid in the cache in seconds.
 Returns `-1` if the value for the key does not expire.
 Returns `-2` if the value for the key has expired, or has not been set.
+
+---
+
+#### *@cache.ttl_many(...) -> dict[str, int]*
+- keys: list[str] — List of cache keys.
+
+How long the given keys are still valid in the cache in seconds.
+Returns `-1` if a value for the key does not expire.
+Returns `-2` if a value for the key has expired, or has not been set.
 
 ---

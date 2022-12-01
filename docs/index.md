@@ -34,12 +34,15 @@ cache = Cache()
 ## Quickstart
 
 Interface works similarly to [Django's cache interface][django-cache]
-with a few additions. Values stay in the cache even if the given timeout is reached, and only gets deleted on the
-next call to `clear`, or any of these methods: `get`, `get_or_set`, `get_many`, `delete`, or `delete_many` for that key.
+with a few additions. Values stay in the cache even if the given timeout
+is reached, and only get deleted on the next call to `clear`, or any of these methods:
+`get`, `get_or_set`, `get_many`, `delete`, `delete_many`, `ttl`, or `ttl_many` for that key.
 
 Supports indexing:
 
-- `cache["key"] = "value"`, `cache["key"]`, `del cache["key"]`
+- `cache["key"] = "value"`
+- `cache["key"]`
+- `del cache["key"]`
 
 Supports membership test:
 
@@ -52,6 +55,7 @@ Can be used as a context manager:
 
 [sqlite]: https://docs.python.org/3/library/sqlite3.html
 [picklable]: https://docs.python.org/3/library/pickle.html
+[django-cache]: https://docs.djangoproject.com/en/4.1/topics/cache/
 
 [coverage-badge]: https://coveralls.io/repos/github/MrThearMan/sqlite3-cache/badge.svg?branch=main
 [status-badge]: https://img.shields.io/github/workflow/status/MrThearMan/sqlite3-cache/Tests
