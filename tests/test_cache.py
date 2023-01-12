@@ -409,7 +409,7 @@ def test_speed():
         interval2 = perf_counter_ns()
         cache.set("foo", "bar")
         interval3 = perf_counter_ns()
-        value = cache.get("foo")
+        value = cache.get("foo")  # noqa
         interval4 = perf_counter_ns()
         cache.delete("foo")
         interval5 = perf_counter_ns()
@@ -431,10 +431,10 @@ def test_speed():
     get_ = sum(get_) / len(get_) / 1000
     del_ = sum(del_) / len(del_) / 1000
 
-    print(f"\n\n Cache creation: {creation} us\n")
-    print(f" Average of {times:_}:")
-    print("--------------------------------------------")
-    print(f" Set: {set_:.01f}us - Min: {set_min:.01f}us - Max: {set_max:.01f}us")
-    print(f" Get: {get_:.01f}us - Min: {get_min:.01f}us - Max: {get_max:.01f}us")
-    print(f" Del: {del_:.01f}us - Min: {del_min:.01f}us - Max: {del_max:.01f}us")
-    print("--------------------------------------------")
+    print(f"\n\n Cache creation: {creation} us\n")  # noqa
+    print(f" Average of {times:_}:")  # noqa
+    print("--------------------------------------------")  # noqa
+    print(f" Set: {set_:.01f}us - Min: {set_min:.01f}us - Max: {set_max:.01f}us")  # noqa
+    print(f" Get: {get_:.01f}us - Min: {get_min:.01f}us - Max: {get_max:.01f}us")  # noqa
+    print(f" Del: {del_:.01f}us - Min: {del_min:.01f}us - Max: {del_max:.01f}us")  # noqa
+    print("--------------------------------------------")  # noqa

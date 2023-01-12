@@ -34,7 +34,7 @@ cache = Cache()
 [picklable]: https://docs.python.org/3/library/pickle.html
 
 [coverage-badge]: https://coveralls.io/repos/github/MrThearMan/sqlite3-cache/badge.svg?branch=main
-[status-badge]: https://img.shields.io/github/workflow/status/MrThearMan/sqlite3-cache/Tests
+[status-badge]: https://img.shields.io/github/actions/workflow/status/MrThearMan/sqlite3-cache/test.yml?branch=main
 [pypi-badge]: https://img.shields.io/pypi/v/sqlite3-cache
 [licence-badge]: https://img.shields.io/github/license/MrThearMan/sqlite3-cache
 [repo-badge]: https://img.shields.io/github/last-commit/MrThearMan/sqlite3-cache
@@ -42,7 +42,7 @@ cache = Cache()
 [version-badge]: https://img.shields.io/pypi/pyversions/sqlite3-cache
 
 [coverage]: https://coveralls.io/github/MrThearMan/sqlite3-cache?branch=main
-[status]: https://github.com/MrThearMan/sqlite3-cache/actions/workflows/main.yml
+[status]: https://github.com/MrThearMan/sqlite3-cache/actions/workflows/test.yml
 [pypi]: https://pypi.org/project/sqlite3-cache
 [licence]: https://github.com/MrThearMan/sqlite3-cache/blob/main/LICENSE
 [repo]: https://github.com/MrThearMan/sqlite3-cache/commits/main

@@ -7,7 +7,6 @@ from pathlib import Path
 from threading import local
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-
 try:
     from typing import Literal
 except ImportError:

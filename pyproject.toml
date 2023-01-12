@@ -19,6 +19,8 @@ keywords = [
 ]
 classifiers = [
     "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -27,8 +29,6 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "Intended Audience :: Developers",
-    "Natural Language :: English",
 ]
 include = [
     "README.md",
@@ -49,14 +49,13 @@ typing-extensions = { version = ">=4.4.0", python = "<3.8" }
 pytest = "7.2.0"
 pytest-freezegun = "0.4.2"
 coverage = "6.5.0"
-pre-commit = "2.20.0"
-tox = "3.27.1"
-tox-gh-actions = "2.11.0"
+pre-commit = "2.21.0"
+tox = "4.2.8"
 coveralls = "3.3.1"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.4.2"
-pymdown-extensions = "9.8"
+pymdown-extensions = "9.9.1"
 mkdocs-mermaid2-plugin = "0.6.0"
 
 [tool.poetry.group.lint.dependencies]
@@ -74,20 +73,18 @@ lines_after_imports = 2
 [tool.ruff]
 fix = true
 line-length = 120
-exclude = [
+extend-exclude = [
     "tests/*",
 ]
 select = [
     "F",  # pyflakes
     "E",  # pycodestyle errors
-    # "D",  # pydocstyle
-    # "N",  # pep8-naming
+    "I",  # isort
     "S",  # flake8-bandit
     "C",  # flake8-comprehensions
     "B",  # flake8-bugbear
     "T",  # flake8-print
     "W",  # pycodestyle warnings
-    # "ANN",  # flake8-annotations
 ]
 ignore = [
 ]
@@ -119,16 +116,8 @@ legacy_tox_ini = """
 envlist = py{37, 38, 39, 310, 311}
 isolated_build = true
 
-[gh-actions]
-python =
-    3.7: py37
-    3.8: py38
-    3.9: py39
-    3.10: py310
-    3.11: py311
-
 [testenv]
-whitelist_externals =
+allowlist_externals =
     poetry
 setenv =
     PYTHONPATH = {toxinidir}
@@ -138,5 +127,5 @@ commands =
 """
 
 [build-system]
-requires = ["poetry-core>=1.1.0"]
+requires = ["poetry-core>=1.4.0"]
 build-backend = "poetry.core.masonry.api"
