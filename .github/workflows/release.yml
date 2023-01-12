@@ -7,6 +7,6 @@ on:
 
 jobs:
   release:
-    uses: MrThearMan/CI/.github/workflows/release.yml@main
+    uses: MrThearMan/CI/.github/workflows/release.yml@v0.2.0
     with:
-      pypi_token: ${{ secrets.PYPI_API_TOKEN }}
+      pypi-token: ${{ secrets.PYPI_API_TOKEN }}

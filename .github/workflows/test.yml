@@ -13,4 +13,4 @@ on:
 
 jobs:
   test:
-    uses: MrThearMan/CI/.github/workflows/test.yml@main
+    uses: MrThearMan/CI/.github/workflows/test.yml@v0.2.0
