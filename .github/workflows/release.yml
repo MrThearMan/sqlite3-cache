@@ -8,5 +8,5 @@ on:
 jobs:
   release:
     uses: MrThearMan/CI/.github/workflows/release.yml@v0.2.0
-    with:
+    secrets:
       pypi-token: ${{ secrets.PYPI_API_TOKEN }}
