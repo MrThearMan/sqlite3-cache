@@ -24,7 +24,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -42,20 +41,20 @@ exclude = [
 "Bug Tracker" = "https://github.com/MrThearMan/sqlite3-cache/issues"
 
 [tool.poetry.dependencies]
-python = ">=3.7.2,<4"
-typing-extensions = { version = ">=4.4.0", python = "<3.8" }
+python = ">=3.8,<4"
 
 [tool.poetry.group.test.dependencies]
-pytest = "7.2.0"
+pytest = "7.2.1"
 pytest-freezegun = "0.4.2"
 coverage = "6.5.0"
-pre-commit = "2.21.0"
-tox = "4.2.8"
+pre-commit = "3.0.1"
+tox = "4.4.2"
+tox-gh-actions = "3.0.0"
 coveralls = "3.3.1"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.4.2"
-pymdown-extensions = "9.9.1"
+pymdown-extensions = "9.9.2"
 mkdocs-mermaid2-plugin = "0.6.0"
 
 [tool.poetry.group.lint.dependencies]
@@ -63,12 +62,6 @@ mypy = "0.991"
 
 [tool.black]
 line-length = 120
-
-[tool.isort]
-profile = "black"
-line_length = 120
-skip_gitignore = "True"
-lines_after_imports = 2
 
 [tool.ruff]
 fix = true
@@ -113,8 +106,15 @@ exclude_lines = [
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py{37, 38, 39, 310, 311}
+envlist = py{38, 39, 310, 311}
 isolated_build = true
+
+[gh-actions]
+python =
+    3.8: py38
+    3.9: py39
+    3.10: py310
+    3.11: py311
 
 [testenv]
 allowlist_externals =

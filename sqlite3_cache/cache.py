@@ -5,13 +5,7 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 from threading import local
-from typing import Any, Callable, Dict, List, Optional, Tuple
-
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
 
 __all__ = ["Cache"]
 
