@@ -44,21 +44,21 @@ exclude = [
 python = ">=3.8,<4"
 
 [tool.poetry.group.test.dependencies]
-pytest = "7.2.1"
+pytest = "7.3.0"
 pytest-freezegun = "0.4.2"
 coverage = "6.5.0"
-pre-commit = "3.0.1"
-tox = "4.4.2"
-tox-gh-actions = "3.0.0"
+pre-commit = "3.2.2"
+tox = "4.4.12"
+tox-gh-actions = "3.1.0"
 coveralls = "3.3.1"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.4.2"
-pymdown-extensions = "9.9.2"
+pymdown-extensions = "9.11"
 mkdocs-mermaid2-plugin = "0.6.0"
 
 [tool.poetry.group.lint.dependencies]
-mypy = "0.991"
+mypy = "1.2.0"
 
 [tool.black]
 line-length = 120
@@ -127,5 +127,5 @@ commands =
 """
 
 [build-system]
-requires = ["poetry-core>=1.4.0"]
+requires = ["poetry-core>=1.5.0"]
 build-backend = "poetry.core.masonry.api"

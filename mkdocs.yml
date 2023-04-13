@@ -9,11 +9,20 @@ theme:
   highlightjs: true
   hljs_languages:
     - python
-    - yaml
     - console
+    - json
 
 markdown_extensions:
-  - pymdownx.superfences
+  pymdownx.superfences:
+    custom_fences:
+      - name: mermaid
+        class: mermaid
+        format: !!python/name:mermaid2.fence_mermaid
+
+plugins:
+  - search:
+  - mermaid2:
+      version: 9.4.3
 
 extra_css:
   - css/docs.css

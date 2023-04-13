@@ -173,7 +173,7 @@ class Cache:
         return pickle.dumps(value, protocol=self.PICKLE_PROTOCOL)
 
     def _unstream(self, value: bytes) -> Any:
-        return pickle.loads(value)
+        return pickle.loads(value)  # noqa: S301
 
     def add(self, key: str, value: Any, timeout: int = DEFAULT_TIMEOUT) -> None:
         """Set the value to the cache only if the key is not already in the cache,
