@@ -18,6 +18,8 @@ pip install sqlite3-cache
 
 **Source Code**: [https://github.com/MrThearMan/sqlite3-cache/](https://github.com/MrThearMan/sqlite3-cache/)
 
+**Contributing**: [https://github.com/MrThearMan/sqlite3-cache/blob/main/CONTRIBUTING.md](https://github.com/MrThearMan/sqlite3-cache/blob/main/CONTRIBUTING.md)
+
 ---
 
 Use [SQLite3][sqlite] as quick, persistent, thread-safe cache.
