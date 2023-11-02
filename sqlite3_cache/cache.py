@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 from threading import local
-from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
+from typing import Any, Callable, ClassVar, Dict, List, Literal, Optional, Tuple, Union
 
 __all__ = ["Cache"]
 
@@ -15,7 +15,7 @@ class Cache:
 
     PICKLE_PROTOCOL = pickle.HIGHEST_PROTOCOL
     DEFAULT_TIMEOUT = 300
-    DEFAULT_PRAGMA = {
+    DEFAULT_PRAGMA: ClassVar[Dict[str, Union[int, str]]] = {
         "mmap_size": 2**26,  # https://www.sqlite.org/pragma.html#pragma_mmap_size
         "cache_size": 8192,  # https://www.sqlite.org/pragma.html#pragma_cache_size
         "wal_autocheckpoint": 1000,  # https://www.sqlite.org/pragma.html#pragma_wal_autocheckpoint
@@ -71,17 +71,18 @@ class Cache:
     )
     _delete_many_sql = "DELETE FROM cache WHERE key IN ({});"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         filename: str = ".cache",
-        path: str = None,
+        path: Optional[str] = None,
         in_memory: bool = True,
         timeout: int = 5,
         isolation_level: Optional[Literal["DEFERRED", "IMMEDIATE", "EXCLUSIVE"]] = "DEFERRED",
-        **kwargs,
-    ):
-        """Create a cache using sqlite3.
+        **kwargs: Any,
+    ) -> None:
+        """
+        Create a cache using sqlite3.
 
         :param filename: Cache file name.
         :param path: Path string to the wanted db location. If None, use current directory.
@@ -92,7 +93,6 @@ class Cache:
                                 https://www.sqlite.org/lang_transaction.html
         :param kwargs: Pragma settings. https://www.sqlite.org/pragma.html
         """
-
         filepath = filename if path is None else str(Path(path) / filename)
         suffix = ":?mode=memory&cache=shared" if in_memory else ""
         self.connection_string = f"{filepath}{suffix}"
@@ -122,26 +122,27 @@ class Cache:
     def __getitem__(self, item: str) -> Any:
         value = self.get(item)
         if value is None:
-            raise KeyError("Key not in cache.")
+            msg = "Key not in cache."
+            raise KeyError(msg)
         return value
 
     def __setitem__(self, item: str, value: Any) -> None:
         self.set(item, value)
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
         self.delete(key)
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         return self._con.execute(self._check_sql, {"key": key}).fetchone() is not None
 
-    def __enter__(self):
-        self._con  # noqa pylint: disable=W0104
+    def __enter__(self) -> "Cache":
+        self._con  # noqa: B018
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: object) -> None:
         self.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.local.instances = getattr(self.local, "instances", 0) - 1
         if self.local.instances <= 0:
             self.close()
@@ -153,7 +154,7 @@ class Cache:
         with suppress(AttributeError):
             delattr(self.local, "con")
 
-    def _apply_pragma(self):
+    def _apply_pragma(self) -> None:
         for key, value in self.pragma.items():
             self._con.execute(self._set_pragma_equal.format(key, value))
 
@@ -165,9 +166,9 @@ class Cache:
 
     @staticmethod
     def _exp_datetime(exp: float) -> Optional[datetime]:
-        if exp == -1.0:
+        if exp == -1.0:  # noqa: PLR2004
             return None
-        return datetime.utcfromtimestamp(exp)
+        return datetime.fromtimestamp(exp, tz=timezone.utc)
 
     def _stream(self, value: Any) -> bytes:
         return pickle.dumps(value, protocol=self.PICKLE_PROTOCOL)
@@ -176,7 +177,8 @@ class Cache:
         return pickle.loads(value)  # noqa: S301
 
     def add(self, key: str, value: Any, timeout: int = DEFAULT_TIMEOUT) -> None:
-        """Set the value to the cache only if the key is not already in the cache,
+        """
+        Set the value to the cache only if the key is not already in the cache,
         or the found value has expired.
 
         :param key: Cache key.
@@ -189,7 +191,8 @@ class Cache:
         self._con.commit()
 
     def get(self, key: str, default: Any = None) -> Any:
-        """Get the value under some key. Return `default` if key not in the cache or expired.
+        """
+        Get the value under some key. Return `default` if key not in the cache or expired.
 
         :param key: Cache key.
         :param default: Value to return if key not in the cache.
@@ -200,15 +203,16 @@ class Cache:
             return default
 
         exp = self._exp_datetime(result[1])
-        if exp is not None and datetime.utcnow() >= exp:
+        if exp is not None and datetime.now(tz=timezone.utc) >= exp:
             self._con.execute(self._delete_sql, {"key": key})
             self._con.commit()
             return default
 
         return self._unstream(result[0])
 
-    def set(self, key: str, value: Any, timeout: int = DEFAULT_TIMEOUT) -> None:
-        """Set a value in cache under some key.
+    def set(self, key: str, value: Any, timeout: int = DEFAULT_TIMEOUT) -> None:  # noqa: A003
+        """
+        Set a value in cache under some key.
 
         :param key: Cache key.
         :param value: Picklable object to store.
@@ -220,7 +224,8 @@ class Cache:
         self._con.commit()
 
     def update(self, key: str, value: Any) -> None:
-        """Update value in the cache. Does nothing if key not in the cache or expired.
+        """
+        Update value in the cache. Does nothing if key not in the cache or expired.
 
         :param key: Cache key.
         :param value: Picklable object to store.
@@ -230,7 +235,8 @@ class Cache:
         self._con.commit()
 
     def touch(self, key: str, timeout: int = DEFAULT_TIMEOUT) -> None:
-        """Extend the lifetime of an object in cache. Does nothing if key is not in the cache or is expired.
+        """
+        Extend the lifetime of an object in cache. Does nothing if key is not in the cache or is expired.
 
         :param key: Cache key.
         :param timeout: How long the value is valid in the cache.
@@ -241,7 +247,8 @@ class Cache:
         self._con.commit()
 
     def delete(self, key: str) -> None:
-        """Remove the value under the given key from the cache. Does nothing if key is not in the cache.
+        """
+        Remove the value under the given key from the cache. Does nothing if key is not in the cache.
 
         :param key: Cache key.
         """
@@ -249,7 +256,8 @@ class Cache:
         self._con.commit()
 
     def add_many(self, dict_: Dict[str, Any], timeout: int = DEFAULT_TIMEOUT) -> None:
-        """For all keys in the given dict, add the value to the cache only if the key is not
+        """
+        For all keys in the given dict, add the value to the cache only if the key is not
         already in the cache, or the found value has expired.
 
         :param dict_: Cache keys with values to add.
@@ -269,7 +277,8 @@ class Cache:
         self._con.commit()
 
     def get_many(self, keys: List[str]) -> Dict[str, Any]:
-        """Get all values that exist and aren't expired from the given cache keys, and return a dict.
+        """
+        Get all values that exist and aren't expired from the given cache keys, and return a dict.
 
         :param keys: List of cache keys.
         """
@@ -282,8 +291,8 @@ class Cache:
         results: Dict[str, Any] = {}
         to_delete: List[str] = []
         for key, value, exp in fetched:
-            exp = self._exp_datetime(exp)
-            if exp is not None and datetime.utcnow() >= exp:
+            exp = self._exp_datetime(exp)  # noqa: PLW2901
+            if exp is not None and datetime.now(tz=timezone.utc) >= exp:
                 to_delete.append(key)
                 continue
 
@@ -296,7 +305,8 @@ class Cache:
         return results
 
     def set_many(self, dict_: Dict[str, Any], timeout: int = DEFAULT_TIMEOUT) -> None:
-        """Set values to the cache for all keys in the given dict.
+        """
+        Set values to the cache for all keys in the given dict.
 
         :param dict_: Cache keys with values to set.
         :param timeout: How long the value is valid in the cache.
@@ -315,7 +325,8 @@ class Cache:
         self._con.commit()
 
     def update_many(self, dict_: Dict[str, Any]) -> None:
-        """Update values to the cache for all keys in the given dict. Does nothing if key not in cache or expired.
+        """
+        Update values to the cache for all keys in the given dict. Does nothing if key not in cache or expired.
 
         :param dict_:Cache keys with values to update to.
         """
@@ -324,7 +335,8 @@ class Cache:
         self._con.commit()
 
     def touch_many(self, keys: List[str], timeout: int = DEFAULT_TIMEOUT) -> None:
-        """Extend the lifetime for all objects under the given keys in cache.
+        """
+        Extend the lifetime for all objects under the given keys in cache.
         Does nothing if a key is not in the cache or is expired.
 
         :param keys: List of cache keys.
@@ -337,7 +349,8 @@ class Cache:
         self._con.commit()
 
     def delete_many(self, keys: List[str]) -> None:
-        """Remove all the values under the given keys from the cache.
+        """
+        Remove all the values under the given keys from the cache.
 
         :param keys: List of cache keys.
         """
@@ -345,7 +358,8 @@ class Cache:
         self._con.commit()
 
     def get_or_set(self, key: str, default: Any, timeout: int = DEFAULT_TIMEOUT) -> Any:
-        """Get a value under some key, or set the default if key is not in cache.
+        """
+        Get a value under some key, or set the default if key is not in cache.
 
         :param key: Cache key.
         :param default: Picklable object to store if key is not in cache.
@@ -356,7 +370,7 @@ class Cache:
 
         if result is not None:
             exp = self._exp_datetime(result[1])
-            if exp is not None and datetime.utcnow() >= exp:
+            if exp is not None and datetime.now(tz=timezone.utc) >= exp:
                 self._con.execute(self._delete_sql, {"key": key})
             else:
                 return self._unstream(result[0])
@@ -372,7 +386,8 @@ class Cache:
         self._con.commit()
 
     def incr(self, key: str, delta: int = 1) -> int:
-        """Increment the value in cache by the given delta.
+        """
+        Increment the value in cache by the given delta.
         Note that this is not an atomic transaction!
 
         :param key: Cache key.
@@ -382,11 +397,13 @@ class Cache:
         result: Optional[Tuple[bytes, float]] = self._con.execute(self._check_sql, {"key": key}).fetchone()
 
         if result is None:
-            raise ValueError("Nonexistent or expired cache key.")
+            msg = "Nonexistent or expired cache key."
+            raise ValueError(msg)
 
         value = self._unstream(result[0])
         if not isinstance(value, int):
-            raise ValueError("Value is not a number.")
+            msg = "Value is not a number."
+            raise ValueError(msg)  # noqa: TRY004
 
         new_value = value + delta
         self._con.execute(self._update_sql, {"key": key, "value": self._stream(new_value)})
@@ -394,7 +411,8 @@ class Cache:
         return new_value
 
     def decr(self, key: str, delta: int = 1) -> int:
-        """Decrement the value in cache by the given delta.
+        """
+        Decrement the value in cache by the given delta.
         Note that this is not an atomic transaction!
 
         :param key: Cache key.
@@ -404,11 +422,13 @@ class Cache:
         result: Optional[Tuple[bytes, float]] = self._con.execute(self._check_sql, {"key": key}).fetchone()
 
         if result is None:
-            raise ValueError("Nonexistent or expired cache key.")
+            msg = "Nonexistent or expired cache key."
+            raise ValueError(msg)
 
         value = self._unstream(result[0])
         if not isinstance(value, int):
-            raise ValueError("Value is not a number.")
+            msg = "Value is not a number."
+            raise ValueError(msg)  # noqa: TRY004
 
         new_value = value - delta
         self._con.execute(self._update_sql, {"key": key, "value": self._stream(new_value)})
@@ -416,7 +436,8 @@ class Cache:
         return new_value
 
     def memoize(self, timeout: int = DEFAULT_TIMEOUT) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-        """Save the result of the decorated function in cache. Calls with different
+        """
+        Save the result of the decorated function in cache. Calls with different
         arguments are saved under different keys.
 
         :param timeout: How long the value is valid in the cache.
@@ -425,7 +446,7 @@ class Cache:
 
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             @wraps(func)
-            def wrapper(*args, **kwargs) -> Callable[..., Any]:
+            def wrapper(*args: Any, **kwargs: Any) -> Callable[..., Any]:
                 result = self.get(f"{func}-{args}-{kwargs}", obj)
                 if result == obj:
                     result = func(*args, **kwargs)
@@ -440,7 +461,8 @@ class Cache:
     memorize = memoize  # for backwards compatibility
 
     def ttl(self, key: str) -> int:
-        """How long the key is still valid in the cache in seconds.
+        """
+        How long the key is still valid in the cache in seconds.
         Returns `-1` if the value for the key does not expire.
         Returns `-2` if the value for the key has expired, or has not been set.
 
@@ -455,7 +477,7 @@ class Cache:
         if exp is None:
             return -1
 
-        ttl = int((exp - datetime.utcnow()).total_seconds())
+        ttl = int((exp - datetime.now(tz=timezone.utc)).total_seconds())
         if ttl <= 0:
             self._con.execute(self._delete_sql, {"key": key})
             self._con.commit()
@@ -464,7 +486,8 @@ class Cache:
         return ttl
 
     def ttl_many(self, keys: List[str]) -> Dict[str, int]:
-        """How long the given keys are still valid in the cache in seconds.
+        """
+        How long the given keys are still valid in the cache in seconds.
         Returns `-1` if a value for the key does not expire.
         Returns `-2` if a value for the key has expired, or has not been set.
 
@@ -487,12 +510,12 @@ class Cache:
                 results[key] = -1
                 continue
 
-            if datetime.utcnow() >= exp:
+            if datetime.now(tz=timezone.utc) >= exp:
                 to_delete.append(key)
                 results[key] = -2
                 continue
 
-            results[key] = int((exp - datetime.utcnow()).total_seconds())
+            results[key] = int((exp - datetime.now(tz=timezone.utc)).total_seconds())
 
         if to_delete:
             self._con.execute(self._delete_many_sql.format(", ".join([f"'{value}'" for value in to_delete])))

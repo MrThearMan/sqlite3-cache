@@ -2,39 +2,40 @@ import sqlite3
 from time import perf_counter_ns, sleep
 
 import pytest
+from freezegun import freeze_time
 
 from sqlite3_cache import Cache
 
 
-def test_cache_creation(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_creation(cache):
     assert cache.connection_string == ".cache:?mode=memory&cache=shared"
 
 
-def test_cache_method_failed(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_method_failed(cache):
     try:
-        cache.set(object(), object())  # noqa
+        cache.set(object(), object())
     except sqlite3.Error:
         pass
     else:
         pytest.fail("Setting to key object() did not raise an error.")
 
 
-def test_cache_set_and_get(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_set_and_get(cache):
     cache.set("foo", "bar", timeout=1)
     assert cache.get("foo") == "bar"
 
 
-def test_cache_getitem_and_setitem(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_getitem_and_setitem(cache):
     cache["foo"] = "bar"
     assert cache["foo"] == "bar"
 
 
-def test_cache_getitem_key_error(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_getitem_key_error(cache):
     try:
         cache["foo"]
     except KeyError as e:
@@ -43,15 +44,15 @@ def test_cache_getitem_key_error(cache, freezer):
         pytest.fail("Accessing a key not in cache did not raise a KeyError.")
 
 
-def test_cache_delitem(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_delitem(cache):
     cache["foo"] = "bar"
     del cache["foo"]
     assert cache.get("foo") is None
 
 
-def test_cache_context_manager(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_context_manager(cache):
     cache["foo"] = "bar"
     cache.close()
     with Cache() as cache:
@@ -64,34 +65,34 @@ def test_cache_contains(cache):
     assert ("foo" in cache) is True
 
 
-def test_cache_value_is_available(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    cache.set("foo", "bar", timeout=2)
-    freezer.move_to("2022-01-01T00:00:01+00:00")
-    assert cache.get("foo") == "bar"
+def test_cache_value_is_available(cache):
+    with freeze_time("2022-01-01T00:00:00+00:00"):
+        cache.set("foo", "bar", timeout=2)
+    with freeze_time("2022-01-01T00:00:01+00:00"):
+        assert cache.get("foo") == "bar"
 
 
-def test_cache_value_not_available(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    cache.set("foo", "bar", timeout=1)
-    freezer.move_to("2022-01-01T00:00:01+00:00")
+def test_cache_value_not_available(cache):
+    with freeze_time("2022-01-01T00:00:00+00:00"):
+        cache.set("foo", "bar", timeout=1)
+    with freeze_time("2022-01-01T00:00:01+00:00"):
+        assert cache.get("foo") is None
+
+
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_value_not_set(cache):
     assert cache.get("foo") is None
 
 
-def test_cache_value_not_set(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    assert cache.get("foo") is None
+def test_cache_value_does_not_expire(cache):
+    with freeze_time("2022-01-01T00:00:00+00:00"):
+        cache.set("foo", "bar", timeout=-1)
+    with freeze_time("9999-01-01T00:00:00+00:00"):
+        assert cache.get("foo") == "bar"
 
 
-def test_cache_value_does_not_expire(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    cache.set("foo", "bar", timeout=-1)
-    freezer.move_to("9999-01-01T00:00:00+00:00")
-    assert cache.get("foo") == "bar"
-
-
-def test_cache_add_and_get(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_add_and_get(cache):
     cache.add("foo", "bar", timeout=1)
     assert cache.get("foo") == "bar"
 
@@ -111,15 +112,15 @@ def test_cache_add_same_twice_and_get__has_expired(cache):
     assert cache.get("foo") == "baz"
 
 
-def test_cache_add_same_twice_and_get__non_expiring(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_add_same_twice_and_get__non_expiring(cache):
     cache.add("foo", "bar", timeout=-1)
     cache.add("foo", "baz", timeout=-1)
     assert cache.get("foo") == "bar"
 
 
-def test_cache_get_default_if_not_exists(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_get_default_if_not_exists(cache):
     assert cache.get("foo", "bar") == "bar"
 
 
@@ -129,81 +130,81 @@ def test_cache_update(cache):
     assert cache.get("foo") == "baz"
 
 
-def test_cache_update__non_expiring(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_update__non_expiring(cache):
     cache.set("foo", "bar", timeout=-1)
     cache.update("foo", "baz")
     assert cache.get("foo") == "baz"
 
 
-def test_cache_update__does_not_exist(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_update__does_not_exist(cache):
     cache.update("foo", "baz")
     assert cache.get("foo") is None
 
 
-def test_cache_delete(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_delete(cache):
     cache.set("foo", "bar", timeout=1)
     cache.delete("foo")
     assert cache.get("foo") is None
 
 
-def test_cache_delete__nothing(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_delete__nothing(cache):
     cache.delete("foo")
     assert cache.get("foo") is None
 
 
-def test_cache_get_or_set(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    cache.set("foo", "bar", timeout=2)
-    freezer.move_to("2022-01-01T00:00:01+00:00")
-    assert cache.get_or_set("foo", None) == "bar"
+def test_cache_get_or_set(cache):
+    with freeze_time("2022-01-01T00:00:00+00:00"):
+        cache.set("foo", "bar", timeout=2)
+    with freeze_time("2022-01-01T00:00:01+00:00"):
+        assert cache.get_or_set("foo", None) == "bar"
 
 
-def test_cache_get_or_set__expired(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    cache.set("foo", "bar", timeout=1)
-    freezer.move_to("2022-01-01T00:00:01+00:00")
-    assert cache.get_or_set("foo", None) is None
+def test_cache_get_or_set__expired(cache):
+    with freeze_time("2022-01-01T00:00:00+00:00"):
+        cache.set("foo", "bar", timeout=1)
+    with freeze_time("2022-01-01T00:00:01+00:00"):
+        assert cache.get_or_set("foo", None) is None
 
 
-def test_cache_get_many(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    cache.set("foo", "bar", timeout=2)
-    cache.set("one", "two", timeout=2)
-    freezer.move_to("2022-01-01T00:00:01+00:00")
-    assert cache.get_many(["foo", "one"]) == {"foo": "bar", "one": "two"}
+def test_cache_get_many(cache):
+    with freeze_time("2022-01-01T00:00:00+00:00"):
+        cache.set("foo", "bar", timeout=2)
+        cache.set("one", "two", timeout=2)
+    with freeze_time("2022-01-01T00:00:01+00:00"):
+        assert cache.get_many(["foo", "one"]) == {"foo": "bar", "one": "two"}
 
 
-def test_cache_get_many__expired(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    cache.set("foo", "bar", timeout=1)
-    cache.set("one", "two", timeout=1)
-    freezer.move_to("2022-01-01T00:00:01+00:00")
-    assert cache.get_many(["foo", "one"]) == {}
+def test_cache_get_many__expired(cache):
+    with freeze_time("2022-01-01T00:00:00+00:00"):
+        cache.set("foo", "bar", timeout=1)
+        cache.set("one", "two", timeout=1)
+    with freeze_time("2022-01-01T00:00:01+00:00"):
+        assert cache.get_many(["foo", "one"]) == {}
 
 
-def test_cache_get_many__nothing(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_get_many__nothing(cache):
     cache.set("foo", "bar", timeout=1)
     cache.set("one", "two", timeout=1)
     assert cache.get_many(["three", "four"]) == {}
 
 
-def test_cache_set_many(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    cache.set_many({"foo": "bar", "one": "two"}, timeout=2)
-    freezer.move_to("2022-01-01T00:00:01+00:00")
-    assert cache.get_many(["foo", "one"]) == {"foo": "bar", "one": "two"}
+def test_cache_set_many(cache):
+    with freeze_time("2022-01-01T00:00:00+00:00"):
+        cache.set_many({"foo": "bar", "one": "two"}, timeout=2)
+    with freeze_time("2022-01-01T00:00:01+00:00"):
+        assert cache.get_many(["foo", "one"]) == {"foo": "bar", "one": "two"}
 
 
-def test_cache_set_many__expired(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    cache.set_many({"foo": "bar", "one": "two"}, timeout=1)
-    freezer.move_to("2022-01-01T00:00:01+00:00")
-    assert cache.get_many(["foo", "one"]) == {}
+def test_cache_set_many__expired(cache):
+    with freeze_time("2022-01-01T00:00:00+00:00"):
+        cache.set_many({"foo": "bar", "one": "two"}, timeout=1)
+    with freeze_time("2022-01-01T00:00:01+00:00"):
+        assert cache.get_many(["foo", "one"]) == {}
 
 
 def test_cache_add_many(cache):
@@ -226,15 +227,15 @@ def test_cache_update_many(cache):
     assert cache.get("three") is None
 
 
-def test_cache_delete_many(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_delete_many(cache):
     cache.set_many({"foo": "bar", "one": "two"}, timeout=1)
     cache.delete_many(["foo", "one"])
     assert cache.get_many(["foo", "one"]) == {}
 
 
-def test_cache_delete_many__nothing(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_delete_many__nothing(cache):
     cache.delete_many(["foo", "one"])
     assert cache.get_many(["foo", "one"]) == {}
 
@@ -267,8 +268,8 @@ def test_cache_touch_many(cache):
     assert cache.get_many(["foo", "one"]) == {"foo": "bar", "one": "two"}
 
 
-def test_cache_clear(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_clear(cache):
     cache.set("foo", "bar", timeout=1)
     cache.clear()
     assert cache.get("foo") is None
@@ -322,8 +323,8 @@ def test_cache_decr__not_a_number(cache):
         pytest.fail("Decrementing a non-number key did not raise an error.")
 
 
-def test_cache_memoize(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_memoize(cache):
 
     @cache.memoize()
     def func(a: int, b: int) -> int:
@@ -342,56 +343,56 @@ def test_cache_memoize(cache, freezer):
     assert value1 == value3
 
 
-def test_cache_ttl(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_ttl(cache):
     cache.set("foo", "bar", timeout=10)
     assert cache.ttl("foo") == 10
 
 
-def test_cache_ttl__not_exists(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_ttl__not_exists(cache):
     assert cache.ttl("foo") == -2
 
 
-def test_cache_ttl__expired(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    cache.set("foo", "bar", timeout=1)
-    freezer.move_to("2022-01-01T00:00:01+00:00")
-    assert cache.ttl("foo") == -2
+def test_cache_ttl__expired(cache):
+    with freeze_time("2022-01-01T00:00:00+00:00"):
+        cache.set("foo", "bar", timeout=1)
+    with freeze_time("2022-01-01T00:00:01+00:00"):
+        assert cache.ttl("foo") == -2
 
 
-def test_cache_ttl__non_expiring(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    cache.set("foo", "bar", timeout=-1)
-    freezer.move_to("9999-01-01T00:00:00+00:00")
-    assert cache.ttl("foo") == -1
+def test_cache_ttl__non_expiring(cache):
+    with freeze_time("2022-01-01T00:00:00+00:00"):
+        cache.set("foo", "bar", timeout=-1)
+    with freeze_time("9999-01-01T00:00:00+00:00"):
+        assert cache.ttl("foo") == -1
 
 
-def test_cache_ttl_many(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_ttl_many(cache):
     cache.set("foo", "bar", timeout=1)
     cache.set("one", "two", timeout=2)
     assert cache.ttl_many(["foo", "one"]) == {"foo": 1, "one": 2}
 
 
-def test_cache_ttl_many__not_exists(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_ttl_many__not_exists(cache):
     assert cache.ttl_many(["foo", "one"]) == {"foo": -2, "one": -2}
 
 
-def test_cache_ttl_many__non_expiring(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test_cache_ttl_many__non_expiring(cache):
     cache.set("foo", "bar", timeout=-1)
     cache.set("one", "two", timeout=-2)
     assert cache.ttl_many(["foo", "one"]) == {"foo": -1, "one": -1}
 
 
-def test_cache_ttl_many__expired(cache, freezer):
-    freezer.move_to("2022-01-01T00:00:00+00:00")
-    cache.set("foo", "bar", timeout=1)
-    cache.set("one", "two", timeout=1)
-    freezer.move_to("2022-01-01T00:00:01+00:00")
-    assert cache.ttl_many(["foo", "one"]) == {"foo": -2, "one": -2}
+def test_cache_ttl_many__expired(cache):
+    with freeze_time("2022-01-01T00:00:00+00:00"):
+        cache.set("foo", "bar", timeout=1)
+        cache.set("one", "two", timeout=1)
+    with freeze_time("2022-01-01T00:00:01+00:00"):
+        assert cache.ttl_many(["foo", "one"]) == {"foo": -2, "one": -2}
 
 
 @pytest.mark.skip("this is a benchmark")
