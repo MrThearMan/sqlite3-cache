@@ -70,6 +70,7 @@ class Cache:
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value, exp = excluded.exp;"
     )
     _delete_many_sql = "DELETE FROM cache WHERE key IN ({});"
+    _get_keys_sql = "SELECT key, exp FROM cache ORDER BY key ASC;"
 
     def __init__(  # noqa: PLR0913
         self,
@@ -519,6 +520,33 @@ class Cache:
 
         if to_delete:
             self._con.execute(self._delete_many_sql.format(", ".join([f"'{value}'" for value in to_delete])))
+            self._con.commit()
+
+        return results
+
+    def get_all_keys(self) -> List[str]:
+        """
+        Get all keys that exist in the cache for currently valid cache items.
+
+        :return: List of cache keys in sort order.
+        """
+        fetched: List[Tuple[str, Any]] = self._con.execute(self._get_keys_sql).fetchall()
+
+        if not fetched:
+            return []
+
+        results: List[str] = []
+        to_delete: List[str] = []
+        for key, exp in fetched:
+            exp = self._exp_datetime(exp)  # noqa: PLW2901
+            if exp is not None and datetime.now(tz=timezone.utc) >= exp:
+                to_delete.append(key)
+                continue
+
+            results.append(key)
+
+        if to_delete:
+            self._con.execute(self._delete_many_sql.format(", ".join([f"'{key}'" for key in to_delete])))
             self._con.commit()
 
         return results

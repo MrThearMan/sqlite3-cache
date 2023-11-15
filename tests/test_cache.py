@@ -395,6 +395,18 @@ def test_cache_ttl_many__expired(cache):
         assert cache.ttl_many(["foo", "one"]) == {"foo": -2, "one": -2}
 
 
+def test_cache_get_all_keys(cache):
+    cache.set("foo", "bar", timeout=100)
+    cache.set("one", "two", timeout=1)
+    cache.set("three", "four", timeout=1)
+    cache.set("biz", "buzz", timeout=100)
+    # keys are sorted in order
+    assert cache.get_all_keys() == ["biz", "foo", "one", "three"]
+    sleep(1.1)
+    # expired keys are not returned
+    assert cache.get_all_keys() == ["biz", "foo"]
+
+
 @pytest.mark.skip("this is a benchmark")
 def test_speed():
     start = perf_counter_ns()
