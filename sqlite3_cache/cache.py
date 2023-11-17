@@ -552,7 +552,6 @@ class Cache:
     def get_all_keys(self) -> List[str]:
         """
         Get all keys that exist in the cache for currently valid cache items.
-
         :return: List of cache keys in sort order.
         """
         fetched: List[Tuple[str, Any]] = self._con.execute(self._get_keys_sql).fetchall()
@@ -568,7 +567,6 @@ class Cache:
         Matching follows the SQLite specification for the LIKE operator, so
         it will match 'A' to 'a', but not 'Ä' to 'ä'.
         Will only return keys that exist in the cache for currently valid cache items.
-
         :param pattern: The pattern to match at the start of the key.
         :return: List of matching cache keys in sort order.
         """
@@ -586,7 +584,6 @@ class Cache:
         Matching follows the SQLite specification for the LIKE operator, so
         it will match 'A' to 'a', but not 'Ä' to 'ä'.
         Will only return keys that exist in the cache for currently valid cache items.
-
         :param pattern: The pattern to find in matching keys.
         :return: List of matching cache keys in sort order.
         """
@@ -603,7 +600,6 @@ class Cache:
         Clear all keys from the cache that start with the given pattern.
         Matching follows the SQLite specification for the LIKE operator, so
         it will match 'A' to 'a', but not 'Ä' to 'ä'.
-
         :param pattern: The pattern to match at the start of the key.
         """
         data = {"pattern": f"{''}{pattern}%"}
@@ -615,7 +611,6 @@ class Cache:
         Clear all keys from the cache that contain the given pattern anywhere in the string.
         Matching follows the SQLite specification for the LIKE operator, so
         it will match 'A' to 'a', but not 'Ä' to 'ä'.
-
         :param pattern: The pattern to find in matching keys.
         """
         data = {"pattern": f"{'%'}{pattern}%"}
