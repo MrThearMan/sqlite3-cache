@@ -565,8 +565,8 @@ class Cache:
     def find_keys_starting_with(self, pattern: str) -> List[str]:
         """
         Find keys that start with the given pattern.
-        Matching follows the SQLite specification for LIKE, so it is case-insensitive
-        to match 'A' to 'a', but case-sensitive to match 'Ä' to 'ä'.
+        Matching follows the SQLite specification for the LIKE operator, so
+        it will match 'A' to 'a', but not 'Ä' to 'ä'.
         Will only return keys that exist in the cache for currently valid cache items.
 
         :param pattern: The pattern to match at the start of the key.
@@ -583,8 +583,8 @@ class Cache:
     def find_matching_keys(self, pattern: str) -> List[str]:
         """
         Find keys that contain the given pattern anywhere in the string.
-        Matching follows the SQLite specification for LIKE, so it is case-insensitive
-        to match 'A' to 'a', but case-sensitive to match 'Ä' to 'ä'.
+        Matching follows the SQLite specification for the LIKE operator, so
+        it will match 'A' to 'a', but not 'Ä' to 'ä'.
         Will only return keys that exist in the cache for currently valid cache items.
 
         :param pattern: The pattern to find in matching keys.
@@ -601,8 +601,8 @@ class Cache:
     def clear_keys_starting_with(self, pattern: str) -> None:
         """
         Clear all keys from the cache that start with the given pattern.
-        Matching follows the SQLite specification for LIKE, so it is case-insensitive
-        to match 'A' to 'a', but case-sensitive to match 'Ä' to 'ä'.
+        Matching follows the SQLite specification for the LIKE operator, so
+        it will match 'A' to 'a', but not 'Ä' to 'ä'.
 
         :param pattern: The pattern to match at the start of the key.
         """
@@ -612,9 +612,9 @@ class Cache:
 
     def clear_matching_keys(self, pattern: str) -> None:
         """
-        Clear all keys that contain the given pattern anywhere in the string.
-        Matching follows the SQLite specification for LIKE, so it is case-insensitive
-        to match 'A' to 'a', but case-sensitive to match 'Ä' to 'ä'.
+        Clear all keys from the cache that contain the given pattern anywhere in the string.
+        Matching follows the SQLite specification for the LIKE operator, so
+        it will match 'A' to 'a', but not 'Ä' to 'ä'.
 
         :param pattern: The pattern to find in matching keys.
         """
