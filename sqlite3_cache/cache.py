@@ -72,7 +72,7 @@ class Cache:
     _delete_many_sql = "DELETE FROM cache WHERE key IN ({});"
     _get_keys_sql = "SELECT key, exp FROM cache ORDER BY key ASC;"
     _find_matching_keys_sql = "SELECT key, exp FROM cache WHERE key LIKE :pattern ORDER BY key ASC;"
-    _clear_starting_with_sql = "DELETE FROM cache WHERE key LIKE :pattern;"
+    _clear_keys_matching_sql = "DELETE FROM cache WHERE key LIKE :pattern;"
 
     def __init__(  # noqa: PLR0913
         self,
@@ -570,7 +570,7 @@ class Cache:
         :param pattern: The pattern to match at the start of the key.
         :return: List of matching cache keys in sort order.
         """
-        data = {"pattern": f"{''}{pattern}%"}
+        data = {"pattern": f"{pattern}%"}
         fetched: List[Tuple[str, Any]] = self._con.execute(self._find_matching_keys_sql, data).fetchall()
 
         if not fetched:
@@ -587,7 +587,7 @@ class Cache:
         :param pattern: The pattern to find in matching keys.
         :return: List of matching cache keys in sort order.
         """
-        data = {"pattern": f"{'%'}{pattern}%"}
+        data = {"pattern": f"%{pattern}%"}
         fetched: List[Tuple[str, Any]] = self._con.execute(self._find_matching_keys_sql, data).fetchall()
 
         if not fetched:
@@ -602,8 +602,8 @@ class Cache:
         it will match 'A' to 'a', but not 'Ä' to 'ä'.
         :param pattern: The pattern to match at the start of the key.
         """
-        data = {"pattern": f"{''}{pattern}%"}
-        self._con.execute(self._clear_starting_with_sql, data)
+        data = {"pattern": f"{pattern}%"}
+        self._con.execute(self._clear_keys_matching_sql, data)
         self._con.commit()
 
     def clear_matching_keys(self, pattern: str) -> None:
@@ -613,6 +613,6 @@ class Cache:
         it will match 'A' to 'a', but not 'Ä' to 'ä'.
         :param pattern: The pattern to find in matching keys.
         """
-        data = {"pattern": f"{'%'}{pattern}%"}
-        self._con.execute(self._clear_starting_with_sql, data)
+        data = {"pattern": f"%{pattern}%"}
+        self._con.execute(self._clear_keys_matching_sql, data)
         self._con.commit()
