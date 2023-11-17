@@ -468,6 +468,24 @@ def test_cache_find_matching_keys(cache):
     assert cache.find_matching_keys("foo") == ["bar.foo", "foo.bar"]
 
 
+def test_clear_keys_starting_with(cache):
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("foo.foo", "foobar", timeout=-1)
+    cache.set("bar.foo", "barfoo", timeout=-1)
+    cache.set("bar.bar", "barbar", timeout=-1)
+    cache.clear_keys_starting_with("bar")
+    assert cache.get_all_keys() == ["foo.bar", "foo.foo"]
+
+
+def test_clear_matching_keys(cache):
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("foo.foo", "foobar", timeout=-1)
+    cache.set("bar.foo", "barfoo", timeout=-1)
+    cache.set("bar.bar", "barbar", timeout=-1)
+    cache.clear_matching_keys("bar")
+    assert cache.get_all_keys() == ["foo.foo"]
+
+
 @pytest.mark.skip("this is a benchmark")
 def test_speed():
     start = perf_counter_ns()

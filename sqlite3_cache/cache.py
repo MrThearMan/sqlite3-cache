@@ -72,6 +72,7 @@ class Cache:
     _delete_many_sql = "DELETE FROM cache WHERE key IN ({});"
     _get_keys_sql = "SELECT key, exp FROM cache ORDER BY key ASC;"
     _find_matching_keys_sql = "SELECT key, exp FROM cache WHERE key LIKE :pattern ORDER BY key ASC;"
+    _clear_starting_with_sql = "DELETE FROM cache WHERE key LIKE :pattern;"
 
     def __init__(  # noqa: PLR0913
         self,
@@ -568,7 +569,7 @@ class Cache:
         to match 'A' to 'a', but case-sensitive to match 'Ä' to 'ä'.
         Will only return keys that exist in the cache for currently valid cache items.
 
-        :param pattern: The pattern to find in matching keys.
+        :param pattern: The pattern to match at the start of the key.
         :return: List of matching cache keys in sort order.
         """
         data = {"pattern": f"{''}{pattern}%"}
@@ -596,3 +597,27 @@ class Cache:
             return []
 
         return self._filter_key_result_list(fetched)
+
+    def clear_keys_starting_with(self, pattern: str) -> None:
+        """
+        Clear all keys from the cache that start with the given pattern.
+        Matching follows the SQLite specification for LIKE, so it is case-insensitive
+        to match 'A' to 'a', but case-sensitive to match 'Ä' to 'ä'.
+
+        :param pattern: The pattern to match at the start of the key.
+        """
+        data = {"pattern": f"{''}{pattern}%"}
+        self._con.execute(self._clear_starting_with_sql, data)
+        self._con.commit()
+
+    def clear_matching_keys(self, pattern: str) -> None:
+        """
+        Clear all keys that contain the given pattern anywhere in the string.
+        Matching follows the SQLite specification for LIKE, so it is case-insensitive
+        to match 'A' to 'a', but case-sensitive to match 'Ä' to 'ä'.
+
+        :param pattern: The pattern to find in matching keys.
+        """
+        data = {"pattern": f"{'%'}{pattern}%"}
+        self._con.execute(self._clear_starting_with_sql, data)
+        self._con.commit()
