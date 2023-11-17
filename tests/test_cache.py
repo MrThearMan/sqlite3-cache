@@ -407,6 +407,67 @@ def test_cache_get_all_keys(cache):
     assert cache.get_all_keys() == ["biz", "foo"]
 
 
+def test_cache_find_keys_starting_with(cache):
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("foo.foo", "foobar", timeout=-1)
+    cache.set("bar.foo", "barfoo", timeout=-1)
+    cache.set("bar.bar", "barbar", timeout=-1)
+    # keys are returned sorted in order
+    assert cache.find_keys_starting_with("foo") == ["foo.bar", "foo.foo"]
+    assert cache.find_keys_starting_with("bar") == ["bar.bar", "bar.foo"]
+
+    cache.clear()
+
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("FOO.foo", "foobar", timeout=-1)
+    cache.set("bar.bar", "bar", timeout=-1)
+    cache.set("BAR.FOO", "foobar", timeout=-1)
+    # case-insensitive matching for plain letters
+    assert cache.find_keys_starting_with("foo") == ["FOO.foo", "foo.bar"]
+    assert cache.find_keys_starting_with("bar") == ["BAR.FOO", "bar.bar"]
+
+    cache.clear()
+
+    cache.set("foo.bar", "bar", timeout=10)
+    cache.set("foo.foo", "foobar", timeout=1)
+    cache.set("bar.foo", "barfoo", timeout=10)
+
+    sleep(1.1)
+
+    # expired keys are not returned
+    assert cache.find_keys_starting_with("foo") == ["foo.bar"]
+
+
+def test_cache_find_matching_keys(cache):
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("foo.foo", "foobar", timeout=-1)
+    cache.set("bar.foo", "barfoo", timeout=-1)
+    cache.set("bar.bar", "barbar", timeout=-1)
+    # keys are returned sorted in order
+    assert cache.find_matching_keys("foo") == ["bar.foo", "foo.bar", "foo.foo"]
+    assert cache.find_matching_keys("bar") == ["bar.bar", "bar.foo", "foo.bar"]
+
+    cache.clear()
+
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("foo.foo", "foobar", timeout=-1)
+    cache.set("FOO.bar", "bar", timeout=-1)
+    cache.set("FOO.FOO", "foobar", timeout=-1)
+    # case-insensitive matching for plain letters
+    assert cache.find_matching_keys("foo") == ["FOO.FOO", "FOO.bar", "foo.bar", "foo.foo"]
+
+    cache.clear()
+
+    cache.set("foo.bar", "bar", timeout=10)
+    cache.set("foo.foo", "foobar", timeout=1)
+    cache.set("bar.foo", "barfoo", timeout=10)
+
+    sleep(1.1)
+
+    # expired keys are not returned
+    assert cache.find_matching_keys("foo") == ["bar.foo", "foo.bar"]
+
+
 @pytest.mark.skip("this is a benchmark")
 def test_speed():
     start = perf_counter_ns()

@@ -71,6 +71,7 @@ class Cache:
     )
     _delete_many_sql = "DELETE FROM cache WHERE key IN ({});"
     _get_keys_sql = "SELECT key, exp FROM cache ORDER BY key ASC;"
+    _find_matching_keys_sql = "SELECT key, exp FROM cache WHERE key LIKE :pattern ORDER BY key ASC;"
 
     def __init__(  # noqa: PLR0913
         self,
@@ -524,20 +525,16 @@ class Cache:
 
         return results
 
-    def get_all_keys(self) -> List[str]:
+    def _filter_key_result_list(self, unfiltered: List[Tuple[str, Any]]) -> List[str]:
         """
-        Get all keys that exist in the cache for currently valid cache items.
-
-        :return: List of cache keys in sort order.
+        Filters key result list to only those keys for cache items that are still alive,
+        and purges expired items from the cache
+        :param unfiltered: A list of key and expiration tuples
+        :return: A filtered list of keys
         """
-        fetched: List[Tuple[str, Any]] = self._con.execute(self._get_keys_sql).fetchall()
-
-        if not fetched:
-            return []
-
         results: List[str] = []
         to_delete: List[str] = []
-        for key, exp in fetched:
+        for key, exp in unfiltered:
             exp = self._exp_datetime(exp)  # noqa: PLW2901
             if exp is not None and datetime.now(tz=timezone.utc) >= exp:
                 to_delete.append(key)
@@ -550,3 +547,52 @@ class Cache:
             self._con.commit()
 
         return results
+
+    def get_all_keys(self) -> List[str]:
+        """
+        Get all keys that exist in the cache for currently valid cache items.
+
+        :return: List of cache keys in sort order.
+        """
+        fetched: List[Tuple[str, Any]] = self._con.execute(self._get_keys_sql).fetchall()
+
+        if not fetched:
+            return []
+
+        return self._filter_key_result_list(fetched)
+
+    def find_keys_starting_with(self, pattern: str) -> List[str]:
+        """
+        Find keys that start with the given pattern.
+        Matching follows the SQLite specification for LIKE, so it is case-insensitive
+        to match 'A' to 'a', but case-sensitive to match 'Ä' to 'ä'.
+        Will only return keys that exist in the cache for currently valid cache items.
+
+        :param pattern: The pattern to find in matching keys.
+        :return: List of matching cache keys in sort order.
+        """
+        data = {"pattern": f"{''}{pattern}%"}
+        fetched: List[Tuple[str, Any]] = self._con.execute(self._find_matching_keys_sql, data).fetchall()
+
+        if not fetched:
+            return []
+
+        return self._filter_key_result_list(fetched)
+
+    def find_matching_keys(self, pattern: str) -> List[str]:
+        """
+        Find keys that contain the given pattern anywhere in the string.
+        Matching follows the SQLite specification for LIKE, so it is case-insensitive
+        to match 'A' to 'a', but case-sensitive to match 'Ä' to 'ä'.
+        Will only return keys that exist in the cache for currently valid cache items.
+
+        :param pattern: The pattern to find in matching keys.
+        :return: List of matching cache keys in sort order.
+        """
+        data = {"pattern": f"{'%'}{pattern}%"}
+        fetched: List[Tuple[str, Any]] = self._con.execute(self._find_matching_keys_sql, data).fetchall()
+
+        if not fetched:
+            return []
+
+        return self._filter_key_result_list(fetched)
