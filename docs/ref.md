@@ -192,6 +192,14 @@ Returns a list of cache keys in naturally sorted order.
 
 ---
 
+#### *@cache.find_matching_keys(...) -> list[str]*
+- like_match_pattern: str – A string formatted for SQL `LIKE` operator comparison.
+
+Find keys that match a SQL `LIKE` pattern.
+Returns a list of matching keys.
+
+---
+
 #### *@cache.find_keys_starting_with(...) -> list[str]*
 - pattern: str – The pattern to match at the start of the key.
 
@@ -203,7 +211,18 @@ Will only return keys that exist in the cache for currently valid cache items.
 
 ---
 
-#### *@cache.find_matching_keys(...) -> list[str]*
+#### *@cache.find_keys_ending_with(...) -> list[str]*
+- pattern: str – The pattern to match at the end of the key.
+
+Find keys that end with the given pattern.
+Matching follows the SQLite specification for the `LIKE` operator, so
+it will match `'A'` to `'a'`, but not `'Ä'` to `'ä'`.
+Returns a list of matching cache keys in sort order.
+Will only return keys that exist in the cache for currently valid cache items.
+
+---
+
+#### *@cache.find_keys_containing(...) -> list[str]*
 - pattern: str – The pattern to find in matching keys.
 
 Find keys that contain the given pattern anywhere in the string.
@@ -211,6 +230,15 @@ Matching follows the SQLite specification for the `LIKE` operator, so
 it will match `'A'` to `'a'`, but not `'Ä'` to `'ä'`.
 Returns a list of matching cache keys in sort order.
 Will only return keys that exist in the cache for currently valid cache items.
+
+---
+
+#### *@cache.clear_matching_keys(...) -> None*
+- like_match_pattern: str – A string formatted for SQL `LIKE` operator comparison.
+
+Clear keys that match a SQL `LIKE` pattern.
+Matching follows the SQLite specification for the `LIKE` operator, so
+it will match `'A'` to `'a'`, but not `'Ä'` to `'ä'`.
 
 ---
 
@@ -223,10 +251,19 @@ it will match `'A'` to `'a'`, but not `'Ä'` to `'ä'`.
 
 ---
 
-#### *@cache.clear_matching_keys(...) -> None*
+#### *@cache.clear_keys_ending_with(...) -> None*
+- pattern: str – The pattern to match at the end of the key.
+
+Clear all keys from the cache that end with the given pattern.
+Matching follows the SQLite specification for the `LIKE` operator, so
+it will match `'A'` to `'a'`, but not `'Ä'` to `'ä'`.
+
+---
+
+#### *@cache.clear_keys_containing(...) -> None*
 - pattern: str – The pattern to find in matching keys.
 
-Clear all keys from the cache that contain the given pattern anywhere in the string.
+Clear keys that contain the given pattern anywhere in the string.
 Matching follows the SQLite specification for the `LIKE` operator, so
 it will match `'A'` to `'a'`, but not `'Ä'` to `'ä'`.
 

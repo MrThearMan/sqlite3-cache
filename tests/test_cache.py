@@ -1,5 +1,6 @@
 import sqlite3
 from time import perf_counter_ns, sleep
+from datetime import datetime, timezone, timedelta
 
 import pytest
 from freezegun import freeze_time
@@ -407,6 +408,33 @@ def test_cache_get_all_keys(cache):
     assert cache.get_all_keys() == ["biz", "foo"]
 
 
+@freeze_time("2022-01-01T00:00:00+00:00")
+def test__filter_key_result_list(cache):
+    def mk_timestamp(delta_secs: int) -> float:
+        return (datetime.now(tz=timezone.utc) + timedelta(seconds=delta_secs)).timestamp()
+
+    unfiltered_results = [
+        ("foo.bar", mk_timestamp(-2)),
+        ("foo.biz", mk_timestamp(-1)),
+        ("bar.bar", mk_timestamp(-0)),
+        ("bar.foo", mk_timestamp(1)),
+        ("biz.bar", mk_timestamp(2))
+    ]
+
+    assert cache._filter_key_result_list(unfiltered_results) == ["bar.foo", "biz.bar"]
+
+
+def test_find_matching_keys(cache):
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("foo.foo", "foobar", timeout=-1)
+    cache.set("bar.foo", "barfoo", timeout=-1)
+    cache.set("bar.bar", "barbar", timeout=-1)
+
+    assert cache.find_matching_keys("foo%") == ["foo.bar", "foo.foo"]
+    assert cache.find_matching_keys("%foo") == ["bar.foo", "foo.foo"]
+    assert cache.find_matching_keys("%foo%") == ["bar.foo", "foo.bar", "foo.foo"]
+
+
 def test_cache_find_keys_starting_with(cache):
     cache.set("foo.bar", "bar", timeout=-1)
     cache.set("foo.foo", "foobar", timeout=-1)
@@ -438,23 +466,24 @@ def test_cache_find_keys_starting_with(cache):
     assert cache.find_keys_starting_with("foo") == ["foo.bar"]
 
 
-def test_cache_find_matching_keys(cache):
+def test_cache_find_keys_ending_with(cache):
     cache.set("foo.bar", "bar", timeout=-1)
     cache.set("foo.foo", "foobar", timeout=-1)
     cache.set("bar.foo", "barfoo", timeout=-1)
     cache.set("bar.bar", "barbar", timeout=-1)
     # keys are returned sorted in order
-    assert cache.find_matching_keys("foo") == ["bar.foo", "foo.bar", "foo.foo"]
-    assert cache.find_matching_keys("bar") == ["bar.bar", "bar.foo", "foo.bar"]
+    assert cache.find_keys_ending_with("foo") == ["bar.foo", "foo.foo"]
+    assert cache.find_keys_ending_with("bar") == ["bar.bar", "foo.bar"]
 
     cache.clear()
 
     cache.set("foo.bar", "bar", timeout=-1)
-    cache.set("foo.foo", "foobar", timeout=-1)
-    cache.set("FOO.bar", "bar", timeout=-1)
-    cache.set("FOO.FOO", "foobar", timeout=-1)
+    cache.set("FOO.foo", "foobar", timeout=-1)
+    cache.set("bar.bar", "bar", timeout=-1)
+    cache.set("BAR.FOO", "foobar", timeout=-1)
     # case-insensitive matching for plain letters
-    assert cache.find_matching_keys("foo") == ["FOO.FOO", "FOO.bar", "foo.bar", "foo.foo"]
+    assert cache.find_keys_ending_with("foo") == ["BAR.FOO", "FOO.foo"]
+    assert cache.find_keys_ending_with("bar") == ["bar.bar", "foo.bar"]
 
     cache.clear()
 
@@ -465,7 +494,62 @@ def test_cache_find_matching_keys(cache):
     sleep(1.1)
 
     # expired keys are not returned
-    assert cache.find_matching_keys("foo") == ["bar.foo", "foo.bar"]
+    assert cache.find_keys_ending_with("foo") == ["bar.foo"]
+
+
+def test_cache_find_keys_containing(cache):
+    cache.set("foo.bar.biz", "bar", timeout=-1)
+    cache.set("foo.foo.bar", "foobar", timeout=-1)
+    cache.set("biz.bar.foo", "barfoo", timeout=-1)
+    cache.set("bar.biz.bar", "barbar", timeout=-1)
+    # keys are returned sorted in order
+    assert cache.find_keys_containing("biz") == ["bar.biz.bar", "biz.bar.foo", "foo.bar.biz"]
+    assert cache.find_keys_containing("foo") == ["biz.bar.foo", "foo.bar.biz", "foo.foo.bar"]
+
+    cache.clear()
+
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("foo.foo", "foobar", timeout=-1)
+    cache.set("FOO.bar", "bar", timeout=-1)
+    cache.set("FOO.FOO", "foobar", timeout=-1)
+    # case-insensitive matching for plain letters
+    assert cache.find_keys_containing("foo") == ["FOO.FOO", "FOO.bar", "foo.bar", "foo.foo"]
+
+    cache.clear()
+
+    cache.set("foo.bar", "bar", timeout=10)
+    cache.set("foo.foo", "foobar", timeout=1)
+    cache.set("bar.foo", "barfoo", timeout=10)
+
+    sleep(1.1)
+
+    # expired keys are not returned
+    assert cache.find_keys_containing("foo") == ["bar.foo", "foo.bar"]
+
+
+def test_clear_matching_keys(cache):
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("foo.foo", "foobar", timeout=-1)
+    cache.set("bar.foo", "barfoo", timeout=-1)
+    cache.set("bar.bar", "barbar", timeout=-1)
+    cache.clear_matching_keys("foo%")
+    assert cache.get_all_keys() == ["bar.bar", "bar.foo"]
+    cache.clear()
+
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("foo.foo", "foobar", timeout=-1)
+    cache.set("bar.foo", "barfoo", timeout=-1)
+    cache.set("bar.bar", "barbar", timeout=-1)
+    cache.clear_matching_keys("%foo")
+    assert cache.get_all_keys() == ["bar.bar", "foo.bar"]
+    cache.clear()
+
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("foo.foo", "foobar", timeout=-1)
+    cache.set("bar.foo", "barfoo", timeout=-1)
+    cache.set("bar.bar", "barbar", timeout=-1)
+    cache.clear_matching_keys("%foo%")
+    assert cache.get_all_keys() == ["bar.bar"]
 
 
 def test_clear_keys_starting_with(cache):
@@ -477,12 +561,21 @@ def test_clear_keys_starting_with(cache):
     assert cache.get_all_keys() == ["foo.bar", "foo.foo"]
 
 
-def test_clear_matching_keys(cache):
+def test_clear_keys_ending_with(cache):
     cache.set("foo.bar", "bar", timeout=-1)
     cache.set("foo.foo", "foobar", timeout=-1)
     cache.set("bar.foo", "barfoo", timeout=-1)
     cache.set("bar.bar", "barbar", timeout=-1)
-    cache.clear_matching_keys("bar")
+    cache.clear_keys_ending_with("bar")
+    assert cache.get_all_keys() == ["bar.foo", "foo.foo"]
+
+
+def test_clear_keys_containing(cache):
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("foo.foo", "foobar", timeout=-1)
+    cache.set("bar.foo", "barfoo", timeout=-1)
+    cache.set("bar.bar", "barbar", timeout=-1)
+    cache.clear_keys_containing("bar")
     assert cache.get_all_keys() == ["foo.foo"]
 
 

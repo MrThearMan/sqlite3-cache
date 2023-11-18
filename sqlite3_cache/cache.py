@@ -563,6 +563,21 @@ class Cache:
 
         return self._filter_key_result_list(fetched)
 
+    def find_matching_keys(self, like_match_pattern: str) -> List[str]:
+        """
+        Find keys that match a SQL `LIKE` pattern.
+
+        :param like_match_pattern: A string formatted for SQL `LIKE` operator comparison.
+        :return: A list of matching keys.
+        """
+        # Any custom pattern can be used here
+        data = {"pattern": like_match_pattern}
+        fetched: List[Tuple[str, Any]] = self._con.execute(self._find_matching_keys_sql, data).fetchall()
+        if not fetched:
+            return []
+
+        return self._filter_key_result_list(fetched)
+
     def find_keys_starting_with(self, pattern: str) -> List[str]:
         """
         Find keys that start with the given pattern.
@@ -573,15 +588,21 @@ class Cache:
         :param pattern: The pattern to match at the start of the key.
         :return: List of matching cache keys in sort order.
         """
-        data = {"pattern": f"{pattern}%"}
-        fetched: List[Tuple[str, Any]] = self._con.execute(self._find_matching_keys_sql, data).fetchall()
+        return self.find_matching_keys(f"{pattern}%")
 
-        if not fetched:
-            return []
+    def find_keys_ending_with(self, pattern: str) -> List[str]:
+        """
+        Find keys that end with the given pattern.
+        Matching follows the SQLite specification for the LIKE operator, so
+        it will match 'A' to 'a', but not 'Ä' to 'ä'.
+        Will only return keys that exist in the cache for currently valid cache items.
 
-        return self._filter_key_result_list(fetched)
+        :param pattern: The pattern to match at the end of the key.
+        :return: List of matching cache keys in sort order.
+        """
+        return self.find_matching_keys(f"%{pattern}")
 
-    def find_matching_keys(self, pattern: str) -> List[str]:
+    def find_keys_containing(self, pattern: str) -> List[str]:
         """
         Find keys that contain the given pattern anywhere in the string.
         Matching follows the SQLite specification for the LIKE operator, so
@@ -591,34 +612,46 @@ class Cache:
         :param pattern: The pattern to find in matching keys.
         :return: List of matching cache keys in sort order.
         """
-        data = {"pattern": f"%{pattern}%"}
-        fetched: List[Tuple[str, Any]] = self._con.execute(self._find_matching_keys_sql, data).fetchall()
+        return self.find_matching_keys(f"%{pattern}%")
 
-        if not fetched:
-            return []
+    def clear_matching_keys(self, like_match_pattern: str) -> None:
+        """
+        Clear keys that match a SQL `LIKE` pattern.
+        Matching follows the SQLite specification for the LIKE operator, so
+        it will match 'A' to 'a', but not 'Ä' to 'ä'.
 
-        return self._filter_key_result_list(fetched)
+        :param like_match_pattern: A string formatted for SQL `LIKE` operator comparison.
+        """
+        data = {"pattern": like_match_pattern}
+        self._con.execute(self._clear_keys_matching_sql, data)
+        self._con.commit()
 
     def clear_keys_starting_with(self, pattern: str) -> None:
         """
-        Clear all keys from the cache that start with the given pattern.
+        Clear keys that start with the given pattern.
         Matching follows the SQLite specification for the LIKE operator, so
         it will match 'A' to 'a', but not 'Ä' to 'ä'.
 
         :param pattern: The pattern to match at the start of the key.
         """
-        data = {"pattern": f"{pattern}%"}
-        self._con.execute(self._clear_keys_matching_sql, data)
-        self._con.commit()
+        return self.clear_matching_keys(f"{pattern}%")
 
-    def clear_matching_keys(self, pattern: str) -> None:
+    def clear_keys_ending_with(self, pattern: str) -> None:
         """
-        Clear all keys from the cache that contain the given pattern anywhere in the string.
+        Clear keys that end with the given pattern.
+        Matching follows the SQLite specification for the LIKE operator, so
+        it will match 'A' to 'a', but not 'Ä' to 'ä'.
+
+        :param pattern: The pattern to match at the end of the key.
+        """
+        return self.clear_matching_keys(f"%{pattern}")
+
+    def clear_keys_containing(self, pattern: str) -> None:
+        """
+        Clear keys that contain the given pattern anywhere in the string.
         Matching follows the SQLite specification for the LIKE operator, so
         it will match 'A' to 'a', but not 'Ä' to 'ä'.
 
         :param pattern: The pattern to find in matching keys.
         """
-        data = {"pattern": f"%{pattern}%"}
-        self._con.execute(self._clear_keys_matching_sql, data)
-        self._con.commit()
+        return self.clear_matching_keys(f"%{pattern}%")
