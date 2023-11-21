@@ -397,6 +397,10 @@ def test_cache_ttl_many__expired(cache):
 
 
 def test_cache_get_all_keys(cache):
+    # empty cache returns empty list
+    assert cache.get_all_keys() == []
+
+    # non-empty cache returns some items
     cache.set("foo", "bar", timeout=100)
     cache.set("one", "two", timeout=1)
     cache.set("three", "four", timeout=1)
@@ -425,6 +429,9 @@ def test__filter_key_result_list(cache):
 
 
 def test_find_matching_keys(cache):
+    # empty cache returns empty list
+    assert cache.find_matching_keys("%foo%") == []
+
     cache.set("foo.bar", "bar", timeout=-1)
     cache.set("foo.foo", "foobar", timeout=-1)
     cache.set("bar.foo", "barfoo", timeout=-1)
@@ -433,6 +440,7 @@ def test_find_matching_keys(cache):
     assert cache.find_matching_keys("foo%") == ["foo.bar", "foo.foo"]
     assert cache.find_matching_keys("%foo") == ["bar.foo", "foo.foo"]
     assert cache.find_matching_keys("%foo%") == ["bar.foo", "foo.bar", "foo.foo"]
+    assert cache.find_matching_keys("%biz%") == []
 
 
 def test_cache_find_keys_starting_with(cache):
@@ -443,6 +451,7 @@ def test_cache_find_keys_starting_with(cache):
     # keys are returned sorted in order
     assert cache.find_keys_starting_with("foo") == ["foo.bar", "foo.foo"]
     assert cache.find_keys_starting_with("bar") == ["bar.bar", "bar.foo"]
+    assert cache.find_keys_starting_with("biz") == []
 
     cache.clear()
 
@@ -474,6 +483,7 @@ def test_cache_find_keys_ending_with(cache):
     # keys are returned sorted in order
     assert cache.find_keys_ending_with("foo") == ["bar.foo", "foo.foo"]
     assert cache.find_keys_ending_with("bar") == ["bar.bar", "foo.bar"]
+    assert cache.find_keys_ending_with("biz") == []
 
     cache.clear()
 
@@ -505,6 +515,7 @@ def test_cache_find_keys_containing(cache):
     # keys are returned sorted in order
     assert cache.find_keys_containing("biz") == ["bar.biz.bar", "biz.bar.foo", "foo.bar.biz"]
     assert cache.find_keys_containing("foo") == ["biz.bar.foo", "foo.bar.biz", "foo.foo.bar"]
+    assert cache.find_keys_containing("bazz") == []
 
     cache.clear()
 
@@ -528,6 +539,9 @@ def test_cache_find_keys_containing(cache):
 
 
 def test_clear_matching_keys(cache):
+    # empty cache should clear just fine
+    assert cache.get_all_keys() == []
+
     cache.set("foo.bar", "bar", timeout=-1)
     cache.set("foo.foo", "foobar", timeout=-1)
     cache.set("bar.foo", "barfoo", timeout=-1)
@@ -550,6 +564,14 @@ def test_clear_matching_keys(cache):
     cache.set("bar.bar", "barbar", timeout=-1)
     cache.clear_matching_keys("%foo%")
     assert cache.get_all_keys() == ["bar.bar"]
+    cache.clear()
+
+    cache.set("foo.bar", "bar", timeout=-1)
+    cache.set("foo.foo", "foobar", timeout=-1)
+    cache.set("bar.foo", "barfoo", timeout=-1)
+    cache.set("bar.bar", "barbar", timeout=-1)
+    cache.clear_matching_keys("")
+    assert cache.get_all_keys() == ["bar.bar", "bar.foo", "foo.bar", "foo.foo"]
 
 
 def test_clear_keys_starting_with(cache):
