@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sqlite3-cache"
-version = "0.2.1"
+version = "0.2.2"
 description = "Use SQLite3 as cache."
 authors = [
     "Matti Lamppu <lamppu.matti.akseli@gmail.com>",

@@ -6,6 +6,7 @@
 [![GitHub][licence-badge]][licence]
 [![GitHub Last Commit][repo-badge]][repo]
 [![GitHub Issues][issues-badge]][issues]
+[![Downloads][downloads-badge]][pypi]
 [![Python Version][version-badge]][pypi]
 
 ```shell
@@ -36,6 +37,7 @@ cache = Cache()
 [picklable]: https://docs.python.org/3/library/pickle.html
 
 [coverage-badge]: https://coveralls.io/repos/github/MrThearMan/sqlite3-cache/badge.svg?branch=main
+[downloads-badge]: https://img.shields.io/pypi/dm/sqlite3-cache
 [status-badge]: https://img.shields.io/github/actions/workflow/status/MrThearMan/sqlite3-cache/test.yml?branch=main
 [pypi-badge]: https://img.shields.io/pypi/v/sqlite3-cache
 [licence-badge]: https://img.shields.io/github/license/MrThearMan/sqlite3-cache
