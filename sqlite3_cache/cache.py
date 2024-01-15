@@ -213,7 +213,7 @@ class Cache:
 
         return self._unstream(result[0])
 
-    def set(self, key: str, value: Any, timeout: int = DEFAULT_TIMEOUT) -> None:  # noqa: A003
+    def set(self, key: str, value: Any, timeout: int = DEFAULT_TIMEOUT) -> None:
         """
         Set a value in cache under some key.
 
