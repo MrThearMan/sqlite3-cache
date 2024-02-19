@@ -169,7 +169,7 @@ class Cache:
 
     @staticmethod
     def _exp_datetime(exp: float) -> Optional[datetime]:
-        if exp == -1.0:  # noqa: PLR2004
+        if exp == -1.0:
             return None
         return datetime.fromtimestamp(exp, tz=timezone.utc)
 
