@@ -46,7 +46,7 @@ python = ">=3.8,<4"
 
 [tool.poetry.group.test.dependencies]
 pytest = "8.1.1"
-coverage = "7.4.3"
+coverage = "7.4.4"
 pytest-asyncio = "0.23.5.post1"
 freezegun = "1.4.0"
 pre-commit = "3.5.0"
