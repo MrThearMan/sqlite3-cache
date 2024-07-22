@@ -74,7 +74,7 @@ class Cache:
     _find_matching_keys_sql = "SELECT key, exp FROM cache WHERE key LIKE :pattern ORDER BY key ASC;"
     _clear_keys_matching_sql = "DELETE FROM cache WHERE key LIKE :pattern;"
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         *,
         filename: str = ".cache",
