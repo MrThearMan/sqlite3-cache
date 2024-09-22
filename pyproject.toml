@@ -24,7 +24,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -42,32 +41,36 @@ exclude = [
 "Bug Tracker" = "https://github.com/MrThearMan/sqlite3-cache/issues"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<4"
+python = ">=3.9,<4"
+typing-extensions = { version = ">=4.10.0", python = "<3.11" }
 
 [tool.poetry.group.test.dependencies]
 pytest = "8.3.3"
 coverage = "7.6.1"
 pytest-asyncio = "0.24.0"
 freezegun = "1.5.1"
-pre-commit = "3.5.0"
-tox = "4.18.1"
+tox = "4.20.0"
 tox-gh-actions = "3.2.0"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.6.1"
-pymdown-extensions = "10.9"
+pymdown-extensions = "10.10"
 mkdocs-mermaid2-plugin = "1.1.1"
 
 [tool.poetry.group.lint.dependencies]
 mypy = "1.11.2"
+pre-commit = "3.8.0"
 
 [tool.ruff]
 fix = true
+unsafe-fixes = true
 line-length = 120
 extend-exclude = [
-    "tests/*",
+    "tests*",
 ]
-select = [
+lint.explicit-preview-rules = true
+lint.preview = true
+lint.select = [
     "A",        # flake8-builtins
     "ANN",      # flake8-annotations
     "ARG",      # flake8-unused-arguments
@@ -85,10 +88,15 @@ select = [
     "E",        # pycodestyle errors
     "EM",       # flake8-errmsg
     "F",        # pyflakes
+    "FA",       # flake8-future-annotations
     "FBT",      # flake8-boolean-trap
+    "FLY",      # flynt
+    "G",        # flake8-logging-format
     "I",        # isort
+    "ICN",      # flake8-import-conventions
     "INP",      # flake8-no-pep420
     "ISC",      # flake8-implicit-str-concat
+    "LOG",      # flake8-logging
     "N",        # pep8-naming
     "PERF",     # perflint
     "PGH",      # pygrep-hooks
@@ -98,20 +106,53 @@ select = [
     "PTH",      # flake8-use-pathlib
     "PYI",      # flake8-pyi
     "Q",        # flake8-quotes
+    "R",        # Refactor
     "RET",      # flake8-return
     "RSE",      # flake8-raise
     "RUF",      # ruff-specific rules
     "S",        # flake8-bandit
     "SIM",      # flake8-simplify
+    "SLF",      # flake8-self
     "T20",      # flake8-print
     "TCH",      # flake8-type-checking
+    "TID",      # flake8-tidy-imports
     "TRY",      # tryceratops
+    "UP",       # pyupgrade
     "W",        # pycodestyle warnings
 ]
-ignore = [
+# Preview rules
+lint.extend-select = [
+    "B909",     # loop-iterator-mutation
+    "FURB110",  # if-exp-instead-of-or-operator
+    "FURB142",  # for-loop-set-mutations
+    "FURB145",  # slice-copy
+    "FURB171",  # single-item-membership-test
+    "FURB187",  # list-reverse-copy
+    "PLE0307",  # invalid-str-return-type
+    "PLR0916",  # too-many-boolean-expressions
+    "PLR1730",  # if-stmt-min-max
+    "PLR1733",  # unnecessary-dict-index-lookup
+    "PLR1736",  # unnecessary-list-index-lookup
+    "PLR6104",  # non-augmented-assignment
+    "PLW0211",  # bad-staticmethod-argument
+    "PLW0642",  # self-or-cls-assignment
+    "RUF021",   # parenthesize-chained-operators
+    "RUF022",   # unsorted-dunder-all
+    "UP042",    # replace-str-enum
+]
+lint.ignore = [
     "ANN101",   # Missing type annotation for `self` in method
     "ANN102",   # Missing type annotation for `cls` in method
     "ANN401",   # Any-typing allowed
+    "ARG002",   # Unused method argument
+    "ARG003",   # Unused class method argument
+    "N805",     # First argument of a method should be named `self`
+    "SLF001",   # Accessing private members is allowed
+    "UP007",    # Use `X | Y` for union type annotations
+    "G004",     # Logging statement uses f-string
+    "S602",     # Broken: https://github.com/astral-sh/ruff/issues/4045
+    "S603",     # Broken: https://github.com/astral-sh/ruff/issues/4045
+    "RUF012",   # Mutable class attributes
     #
     # Conflicting with ruff-format
     #
@@ -130,6 +171,62 @@ ignore = [
     "Q003",     # avoidable-escaped-quote
     "W191",     # tab-indentation
 ]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"test_*.py" = [
+    "ANN",      # No need to annotate tests
+    "N801",     # Allow whatever class names in tests
+    "N802",     # Allow whatever function names in tests
+    "N815",     # Allow whatever variable names in tests
+    "PLR0915",  # Can have as many statements as needed
+    "PLR2004",  # Magic value comparisons are allowed in tests
+    "S101",     # Assert is fine
+    "S105",     # Hardcoded passwords are fine in tests
+    "S106",     # Hardcoded passwords are fine in tests
+    "S108",     # No need to care about insecure temp file usages in tests
+    "S311",     # Pseudo-random generators are fine here
+    "SLF",      # Allow accessing private members in tests
+    "UP",       # No upgrade rules
+]
+"conftest.py" = [
+    "ARG",      # Fixtures can be unused
+    "ANN",      # No need to annotate tests
+    "UP",       # No upgrade rules
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = false
+split-on-trailing-comma = false
+known-first-party = [
+    "sqlite3_cache",
+]
+
+[tool.ruff.lint.flake8-import-conventions]
+banned-from = [
+    "base64",
+    "csv",
+    "datetime",
+    "hashlib",
+    "hmac",
+    "json",
+    "logging",
+    "math",
+    "os",
+    "pickle",
+    "random",
+    "re",
+    "shutil",
+    "subprocess",
+    "sys",
+    "tempfile",
+    "time",
+    "uuid",
+    "xml",
+    "yaml",
+]
+
+[tool.ruff.lint.pylint]
+max-args = 7
 
 [tool.mypy]
 python_version = "3.12"
@@ -155,12 +252,11 @@ exclude_lines = [
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py{38, 39, 310, 311, 312}
+envlist = py{39, 310, 311, 312}
 isolated_build = true
 
 [gh-actions]
 python =
-    3.8: py38
     3.9: py39
     3.10: py310
     3.11: py311

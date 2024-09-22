@@ -1,11 +1,19 @@
+from __future__ import annotations
+
+import datetime
 import pickle
 import sqlite3
 from contextlib import suppress
-from datetime import datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 from threading import local
-from typing import Any, Callable, ClassVar, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Callable, ClassVar, Literal
+
+try:
+    from typing import Self
+except ImportError:
+    from typing_extensions import Self
+
 
 __all__ = ["Cache"]
 
@@ -15,7 +23,7 @@ class Cache:
 
     PICKLE_PROTOCOL = pickle.HIGHEST_PROTOCOL
     DEFAULT_TIMEOUT = 300
-    DEFAULT_PRAGMA: ClassVar[Dict[str, Union[int, str]]] = {
+    DEFAULT_PRAGMA: ClassVar[dict[str, int | str]] = {
         "mmap_size": 2**26,  # https://www.sqlite.org/pragma.html#pragma_mmap_size
         "cache_size": 8192,  # https://www.sqlite.org/pragma.html#pragma_cache_size
         "wal_autocheckpoint": 1000,  # https://www.sqlite.org/pragma.html#pragma_wal_autocheckpoint
@@ -78,10 +86,10 @@ class Cache:
         self,
         *,
         filename: str = ".cache",
-        path: Optional[str] = None,
+        path: str | None = None,
         in_memory: bool = True,
         timeout: int = 5,
-        isolation_level: Optional[Literal["DEFERRED", "IMMEDIATE", "EXCLUSIVE"]] = "DEFERRED",
+        isolation_level: Literal["DEFERRED", "IMMEDIATE", "EXCLUSIVE"] | None = "DEFERRED",
         **kwargs: Any,
     ) -> None:
         """
@@ -138,7 +146,7 @@ class Cache:
     def __contains__(self, key: str) -> bool:
         return self._con.execute(self._check_sql, {"key": key}).fetchone() is not None
 
-    def __enter__(self) -> "Cache":
+    def __enter__(self) -> Self:
         self._con  # noqa: B018
         return self
 
@@ -165,13 +173,13 @@ class Cache:
     def _exp_timestamp(timeout: int = DEFAULT_TIMEOUT) -> float:
         if timeout < 0:
             return -1.0
-        return (datetime.now(tz=timezone.utc) + timedelta(seconds=timeout)).timestamp()
+        return (datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=timeout)).timestamp()
 
     @staticmethod
-    def _exp_datetime(exp: float) -> Optional[datetime]:
+    def _exp_datetime(exp: float) -> datetime.datetime | None:
         if exp == -1.0:
             return None
-        return datetime.fromtimestamp(exp, tz=timezone.utc)
+        return datetime.datetime.fromtimestamp(exp, tz=datetime.timezone.utc)
 
     def _stream(self, value: Any) -> bytes:
         return pickle.dumps(value, protocol=self.PICKLE_PROTOCOL)
@@ -200,13 +208,13 @@ class Cache:
         :param key: Cache key.
         :param default: Value to return if key not in the cache.
         """
-        result: Optional[Tuple[bytes, float]] = self._con.execute(self._get_sql, {"key": key}).fetchone()
+        result: tuple[bytes, float] | None = self._con.execute(self._get_sql, {"key": key}).fetchone()
 
         if result is None:
             return default
 
         exp = self._exp_datetime(result[1])
-        if exp is not None and datetime.now(tz=timezone.utc) >= exp:
+        if exp is not None and datetime.datetime.now(tz=datetime.timezone.utc) >= exp:
             self._con.execute(self._delete_sql, {"key": key})
             self._con.commit()
             return default
@@ -258,7 +266,7 @@ class Cache:
         self._con.execute(self._delete_sql, {"key": key})
         self._con.commit()
 
-    def add_many(self, dict_: Dict[str, Any], timeout: int = DEFAULT_TIMEOUT) -> None:
+    def add_many(self, dict_: dict[str, Any], timeout: int = DEFAULT_TIMEOUT) -> None:
         """
         For all keys in the given dict, add the value to the cache only if the key is not
         already in the cache, or the found value has expired.
@@ -279,23 +287,23 @@ class Cache:
         self._con.execute(command, data)
         self._con.commit()
 
-    def get_many(self, keys: List[str]) -> Dict[str, Any]:
+    def get_many(self, keys: list[str]) -> dict[str, Any]:
         """
         Get all values that exist and aren't expired from the given cache keys, and return a dict.
 
         :param keys: List of cache keys.
         """
         seq = ", ".join([f"'{value}'" for value in keys])
-        fetched: List[Tuple[str, Any, float]] = self._con.execute(self._get_many_sql.format(seq)).fetchall()
+        fetched: list[tuple[str, Any, float]] = self._con.execute(self._get_many_sql.format(seq)).fetchall()
 
         if not fetched:
             return {}
 
-        results: Dict[str, Any] = {}
-        to_delete: List[str] = []
+        results: dict[str, Any] = {}
+        to_delete: list[str] = []
         for key, value, exp in fetched:
             exp = self._exp_datetime(exp)  # noqa: PLW2901
-            if exp is not None and datetime.now(tz=timezone.utc) >= exp:
+            if exp is not None and datetime.datetime.now(tz=datetime.timezone.utc) >= exp:
                 to_delete.append(key)
                 continue
 
@@ -307,7 +315,7 @@ class Cache:
 
         return results
 
-    def set_many(self, dict_: Dict[str, Any], timeout: int = DEFAULT_TIMEOUT) -> None:
+    def set_many(self, dict_: dict[str, Any], timeout: int = DEFAULT_TIMEOUT) -> None:
         """
         Set values to the cache for all keys in the given dict.
 
@@ -327,7 +335,7 @@ class Cache:
         self._con.execute(command, data)
         self._con.commit()
 
-    def update_many(self, dict_: Dict[str, Any]) -> None:
+    def update_many(self, dict_: dict[str, Any]) -> None:
         """
         Update values to the cache for all keys in the given dict. Does nothing if key not in cache or expired.
 
@@ -337,7 +345,7 @@ class Cache:
         self._con.executemany(self._update_sql, seq)
         self._con.commit()
 
-    def touch_many(self, keys: List[str], timeout: int = DEFAULT_TIMEOUT) -> None:
+    def touch_many(self, keys: list[str], timeout: int = DEFAULT_TIMEOUT) -> None:
         """
         Extend the lifetime for all objects under the given keys in cache.
         Does nothing if a key is not in the cache or is expired.
@@ -351,7 +359,7 @@ class Cache:
         self._con.executemany(self._touch_sql, seq)
         self._con.commit()
 
-    def delete_many(self, keys: List[str]) -> None:
+    def delete_many(self, keys: list[str]) -> None:
         """
         Remove all the values under the given keys from the cache.
 
@@ -369,11 +377,11 @@ class Cache:
         :param timeout: How long the value is valid in the cache.
                         Negative numbers will keep the key in cache until manually removed.
         """
-        result: Optional[Tuple[bytes, float]] = self._con.execute(self._get_sql, {"key": key}).fetchone()
+        result: tuple[bytes, float] | None = self._con.execute(self._get_sql, {"key": key}).fetchone()
 
         if result is not None:
             exp = self._exp_datetime(result[1])
-            if exp is not None and datetime.now(tz=timezone.utc) >= exp:
+            if exp is not None and datetime.datetime.now(tz=datetime.timezone.utc) >= exp:
                 self._con.execute(self._delete_sql, {"key": key})
             else:
                 return self._unstream(result[0])
@@ -397,7 +405,7 @@ class Cache:
         :param delta: How much to increment.
         :raises ValueError: Value cannot be incremented.
         """
-        result: Optional[Tuple[bytes, float]] = self._con.execute(self._check_sql, {"key": key}).fetchone()
+        result: tuple[bytes, float] | None = self._con.execute(self._check_sql, {"key": key}).fetchone()
 
         if result is None:
             msg = "Nonexistent or expired cache key."
@@ -422,7 +430,7 @@ class Cache:
         :param delta: How much to decrement.
         :raises ValueError: Value cannot be decremented.
         """
-        result: Optional[Tuple[bytes, float]] = self._con.execute(self._check_sql, {"key": key}).fetchone()
+        result: tuple[bytes, float] | None = self._con.execute(self._check_sql, {"key": key}).fetchone()
 
         if result is None:
             msg = "Nonexistent or expired cache key."
@@ -471,7 +479,7 @@ class Cache:
 
         :param key: Cache key.
         """
-        result: Optional[Tuple[bytes, float]] = self._con.execute(self._get_sql, {"key": key}).fetchone()
+        result: tuple[bytes, float] | None = self._con.execute(self._get_sql, {"key": key}).fetchone()
 
         if result is None:
             return -2
@@ -480,7 +488,7 @@ class Cache:
         if exp is None:
             return -1
 
-        ttl = int((exp - datetime.now(tz=timezone.utc)).total_seconds())
+        ttl = int((exp - datetime.datetime.now(tz=datetime.timezone.utc)).total_seconds())
         if ttl <= 0:
             self._con.execute(self._delete_sql, {"key": key})
             self._con.commit()
@@ -488,7 +496,7 @@ class Cache:
 
         return ttl
 
-    def ttl_many(self, keys: List[str]) -> Dict[str, int]:
+    def ttl_many(self, keys: list[str]) -> dict[str, int]:
         """
         How long the given keys are still valid in the cache in seconds.
         Returns `-1` if a value for the key does not expire.
@@ -497,11 +505,11 @@ class Cache:
         :param keys: List of cache keys.
         """
         seq = ", ".join([f"'{value}'" for value in keys])
-        fetched: List[Tuple[str, Any, float]] = self._con.execute(self._get_many_sql.format(seq)).fetchall()
-        exp_by_key: Dict[str, float] = {key: exp for key, _, exp in fetched}
+        fetched: list[tuple[str, Any, float]] = self._con.execute(self._get_many_sql.format(seq)).fetchall()
+        exp_by_key: dict[str, float] = {key: exp for key, _, exp in fetched}
 
-        results: Dict[str, int] = {}
-        to_delete: List[str] = []
+        results: dict[str, int] = {}
+        to_delete: list[str] = []
         for key in keys:
             exp_ = exp_by_key.get(key)
             if exp_ is None:
@@ -513,12 +521,12 @@ class Cache:
                 results[key] = -1
                 continue
 
-            if datetime.now(tz=timezone.utc) >= exp:
+            if datetime.datetime.now(tz=datetime.timezone.utc) >= exp:
                 to_delete.append(key)
                 results[key] = -2
                 continue
 
-            results[key] = int((exp - datetime.now(tz=timezone.utc)).total_seconds())
+            results[key] = int((exp - datetime.datetime.now(tz=datetime.timezone.utc)).total_seconds())
 
         if to_delete:
             self._con.execute(self._delete_many_sql.format(", ".join([f"'{value}'" for value in to_delete])))
@@ -526,7 +534,7 @@ class Cache:
 
         return results
 
-    def _filter_key_result_list(self, unfiltered: List[Tuple[str, Any]]) -> List[str]:
+    def _filter_key_result_list(self, unfiltered: list[tuple[str, Any]]) -> list[str]:
         """
         Filters key result list to only those keys for cache items that are still alive,
         and purges expired items from the cache.
@@ -534,11 +542,11 @@ class Cache:
         :param unfiltered: A list of key and expiration tuples
         :return: A filtered list of keys
         """
-        results: List[str] = []
-        to_delete: List[str] = []
+        results: list[str] = []
+        to_delete: list[str] = []
         for key, exp in unfiltered:
             exp = self._exp_datetime(exp)  # noqa: PLW2901
-            if exp is not None and datetime.now(tz=timezone.utc) >= exp:
+            if exp is not None and datetime.datetime.now(tz=datetime.timezone.utc) >= exp:
                 to_delete.append(key)
                 continue
 
@@ -550,20 +558,20 @@ class Cache:
 
         return results
 
-    def get_all_keys(self) -> List[str]:
+    def get_all_keys(self) -> list[str]:
         """
         Get all keys that exist in the cache for currently valid cache items.
 
         :return: List of cache keys in sort order.
         """
-        fetched: List[Tuple[str, Any]] = self._con.execute(self._get_keys_sql).fetchall()
+        fetched: list[tuple[str, Any]] = self._con.execute(self._get_keys_sql).fetchall()
 
         if not fetched:
             return []
 
         return self._filter_key_result_list(fetched)
 
-    def find_matching_keys(self, like_match_pattern: str) -> List[str]:
+    def find_matching_keys(self, like_match_pattern: str) -> list[str]:
         """
         Find keys that match a SQL `LIKE` pattern.
 
@@ -572,13 +580,13 @@ class Cache:
         """
         # Any custom pattern can be used here
         data = {"pattern": like_match_pattern}
-        fetched: List[Tuple[str, Any]] = self._con.execute(self._find_matching_keys_sql, data).fetchall()
+        fetched: list[tuple[str, Any]] = self._con.execute(self._find_matching_keys_sql, data).fetchall()
         if not fetched:
             return []
 
         return self._filter_key_result_list(fetched)
 
-    def find_keys_starting_with(self, pattern: str) -> List[str]:
+    def find_keys_starting_with(self, pattern: str) -> list[str]:
         """
         Find keys that start with the given pattern.
         Matching follows the SQLite specification for the LIKE operator, so
@@ -590,7 +598,7 @@ class Cache:
         """
         return self.find_matching_keys(f"{pattern}%")
 
-    def find_keys_ending_with(self, pattern: str) -> List[str]:
+    def find_keys_ending_with(self, pattern: str) -> list[str]:
         """
         Find keys that end with the given pattern.
         Matching follows the SQLite specification for the LIKE operator, so
@@ -602,7 +610,7 @@ class Cache:
         """
         return self.find_matching_keys(f"%{pattern}")
 
-    def find_keys_containing(self, pattern: str) -> List[str]:
+    def find_keys_containing(self, pattern: str) -> list[str]:
         """
         Find keys that contain the given pattern anywhere in the string.
         Matching follows the SQLite specification for the LIKE operator, so
