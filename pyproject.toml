@@ -1,17 +1,12 @@
-[tool.poetry]
+[project]
 name = "sqlite3-cache"
 version = "0.2.2"
 description = "Use SQLite3 as cache."
 authors = [
-    "Matti Lamppu <lamppu.matti.akseli@gmail.com>",
-]
-packages = [
-    { include = "sqlite3_cache" },
+    { name = "Matti Lamppu", email = "lamppu.matti.akseli@gmail.com" },
 ]
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/MrThearMan/sqlite3-cache"
-repository = "https://github.com/MrThearMan/sqlite3-cache"
 keywords = [
     "sqlite",
     "sqlite3",
@@ -29,19 +24,24 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
-include = [
-    "README.md",
-    "LICENSE",
-]
-exclude = [
-    "tests",
+requires-python = ">=3.10,<4"
+dynamic = [
+    "dependencies",
 ]
 
-[tool.poetry.urls]
+[project.urls]
+"Homepage" = "https://mrthearman.github.io/sqlite3-cache"
+"Repository" = "https://github.com/MrThearMan/sqlite3-cache"
 "Bug Tracker" = "https://github.com/MrThearMan/sqlite3-cache/issues"
+"Documentation" = "https://mrthearman.github.io/sqlite3-cache"
+
+[tool.poetry]
+requires-poetry = ">=2.0.0"
+packages = [
+    { include = "sqlite3_cache" },
+]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<4"
 typing-extensions = { version = ">=4.10.0", python = "<3.11" }
 
 [tool.poetry.group.test.dependencies]
@@ -58,7 +58,6 @@ pymdown-extensions = "10.13"
 mkdocs-mermaid2-plugin = "1.2.1"
 
 [tool.poetry.group.lint.dependencies]
-mypy = "1.14.1"
 pre-commit = "4.0.1"
 
 [tool.ruff]
@@ -141,8 +140,7 @@ lint.extend-select = [
     "UP042",    # replace-str-enum
 ]
 lint.ignore = [
-    "ANN101",   # Missing type annotation for `self` in method
-    "ANN102",   # Missing type annotation for `cls` in method
+    "A005",     # Allow shadowing builtin modules
     "ANN401",   # Any-typing allowed
     "ARG002",   # Unused method argument
     "ARG003",   # Unused class method argument
@@ -228,11 +226,6 @@ banned-from = [
 [tool.ruff.lint.pylint]
 max-args = 7
 
-[tool.mypy]
-python_version = "3.13"
-warn_return_any = "True"
-warn_unused_configs = "True"
-
 [tool.coverage.run]
 relative_files = true
 
@@ -270,9 +263,9 @@ setenv =
     PYTHONPATH = {toxinidir}
 commands =
     poetry install
-    poetry run coverage run -m pytest -vv -s --log-cli-level=INFO
+    poetry run coverage run -m pytest --disable-warnings
 """
 
 [build-system]
-requires = ["poetry-core>=1.9.0"]
+requires = ["poetry-core>=2.0.0"]
 build-backend = "poetry.core.masonry.api"
