@@ -7,7 +7,10 @@ from contextlib import suppress
 from functools import wraps
 from pathlib import Path
 from threading import local
-from typing import Any, Callable, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 try:
     from typing import Self
@@ -62,8 +65,7 @@ class Cache:
     # TODO: add 'RETURNING COUNT(*)!=0' to these when sqlite3 version >=3.35.0
     _delete_sql = "DELETE FROM cache WHERE key = :key;"
     _touch_sql = (
-        "UPDATE cache SET exp = :exp WHERE key = :key "
-        "AND (exp = -1.0 OR DATETIME(exp, 'unixepoch') > DATETIME('now'));"
+        "UPDATE cache SET exp = :exp WHERE key = :key AND (exp = -1.0 OR DATETIME(exp, 'unixepoch') > DATETIME('now'));"
     )
     _clear_sql = "DELETE FROM cache;"
 
