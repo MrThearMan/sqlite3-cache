@@ -46,9 +46,9 @@ typing-extensions = { version = ">=4.10.0", python = "<3.11" }
 
 [tool.poetry.group.test.dependencies]
 pytest = "8.4.1"
-coverage = "7.10.2"
+coverage = "7.10.3"
 pytest-asyncio = "1.1.0"
-freezegun = "1.5.4"
+freezegun = "1.5.5"
 tox = "4.28.4"
 tox-gh-actions = "3.3.0"
 
@@ -58,7 +58,7 @@ pymdown-extensions = "10.16.1"
 mkdocs-mermaid2-plugin = "1.2.1"
 
 [tool.poetry.group.lint.dependencies]
-pre-commit = "4.2.0"
+pre-commit = "4.3.0"
 
 [tool.ruff]
 fix = true
