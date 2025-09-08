@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 try:
     from typing import Self
 except ImportError:
-    from typing_extensions import Self
+    from typing import Self
 
 
 __all__ = ["Cache"]
@@ -175,13 +175,13 @@ class Cache:
     def _exp_timestamp(timeout: int = DEFAULT_TIMEOUT) -> float:
         if timeout < 0:
             return -1.0
-        return (datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=timeout)).timestamp()
+        return (datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(seconds=timeout)).timestamp()
 
     @staticmethod
     def _exp_datetime(exp: float) -> datetime.datetime | None:
         if exp == -1.0:
             return None
-        return datetime.datetime.fromtimestamp(exp, tz=datetime.timezone.utc)
+        return datetime.datetime.fromtimestamp(exp, tz=datetime.UTC)
 
     def _stream(self, value: Any) -> bytes:
         return pickle.dumps(value, protocol=self.PICKLE_PROTOCOL)
@@ -216,7 +216,7 @@ class Cache:
             return default
 
         exp = self._exp_datetime(result[1])
-        if exp is not None and datetime.datetime.now(tz=datetime.timezone.utc) >= exp:
+        if exp is not None and datetime.datetime.now(tz=datetime.UTC) >= exp:
             self._con.execute(self._delete_sql, {"key": key})
             self._con.commit()
             return default
@@ -305,7 +305,7 @@ class Cache:
         to_delete: list[str] = []
         for key, value, exp in fetched:
             exp = self._exp_datetime(exp)  # noqa: PLW2901
-            if exp is not None and datetime.datetime.now(tz=datetime.timezone.utc) >= exp:
+            if exp is not None and datetime.datetime.now(tz=datetime.UTC) >= exp:
                 to_delete.append(key)
                 continue
 
@@ -383,7 +383,7 @@ class Cache:
 
         if result is not None:
             exp = self._exp_datetime(result[1])
-            if exp is not None and datetime.datetime.now(tz=datetime.timezone.utc) >= exp:
+            if exp is not None and datetime.datetime.now(tz=datetime.UTC) >= exp:
                 self._con.execute(self._delete_sql, {"key": key})
             else:
                 return self._unstream(result[0])
@@ -490,7 +490,7 @@ class Cache:
         if exp is None:
             return -1
 
-        ttl = int((exp - datetime.datetime.now(tz=datetime.timezone.utc)).total_seconds())
+        ttl = int((exp - datetime.datetime.now(tz=datetime.UTC)).total_seconds())
         if ttl <= 0:
             self._con.execute(self._delete_sql, {"key": key})
             self._con.commit()
@@ -523,12 +523,12 @@ class Cache:
                 results[key] = -1
                 continue
 
-            if datetime.datetime.now(tz=datetime.timezone.utc) >= exp:
+            if datetime.datetime.now(tz=datetime.UTC) >= exp:
                 to_delete.append(key)
                 results[key] = -2
                 continue
 
-            results[key] = int((exp - datetime.datetime.now(tz=datetime.timezone.utc)).total_seconds())
+            results[key] = int((exp - datetime.datetime.now(tz=datetime.UTC)).total_seconds())
 
         if to_delete:
             self._con.execute(self._delete_many_sql.format(", ".join([f"'{value}'" for value in to_delete])))
@@ -548,7 +548,7 @@ class Cache:
         to_delete: list[str] = []
         for key, exp in unfiltered:
             exp = self._exp_datetime(exp)  # noqa: PLW2901
-            if exp is not None and datetime.datetime.now(tz=datetime.timezone.utc) >= exp:
+            if exp is not None and datetime.datetime.now(tz=datetime.UTC) >= exp:
                 to_delete.append(key)
                 continue
 
