@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>API Reference - Sqlite Cache</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../css/docs.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "API Reference";
+        var mkdocs_page_input_path = "ref.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/console.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Sqlite Cache
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">API Reference</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#cache-cache">Cache(...) → Cache</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheclose-none">cache.close() → None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheadd-none">cache.add(...) → None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheget-any">cache.get(...) → Any</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheset-none">cache.set(...) → None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheupdate-none">cache.update(...) → None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cachetouch-none">cache.touch(...) → None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cachedelete-none">cache.delete(...) → None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheadd_many-none">cache.add_many(...) → None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheget_many-dictstr-any">cache.get_many(...) → dict[str, Any]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheset_many-none">cache.set_many(...) → None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheupdate_many-none">cache.update_many(...) → None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cachetouch_many-none">cache.touch_many(...) → None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cachedelete_many-none">cache.delete_many(...) → None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheget_or_set-any">cache.get_or_set(...) → Any</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheclear-none">cache.clear() → None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheincr-int">cache.incr(...) → int</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cachedecr-int">cache.decr(...) → int</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cachememoize-callable-any">@cache.memoize(...) -&gt; Callable[..., Any]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cachettl-int">@cache.ttl(...) -&gt; int</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cachettl_many-dictstr-int">@cache.ttl_many(...) -&gt; dict[str, int]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheget_all_keys-liststr">@cache.get_all_keys() -&gt; list[str]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cachefind_matching_keys-liststr">@cache.find_matching_keys(...) -&gt; list[str]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cachefind_keys_starting_with-liststr">@cache.find_keys_starting_with(...) -&gt; list[str]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cachefind_keys_ending_with-liststr">@cache.find_keys_ending_with(...) -&gt; list[str]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cachefind_keys_containing-liststr">@cache.find_keys_containing(...) -&gt; list[str]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheclear_matching_keys-none">@cache.clear_matching_keys(...) -&gt; None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheclear_keys_starting_with-none">@cache.clear_keys_starting_with(...) -&gt; None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheclear_keys_ending_with-none">@cache.clear_keys_ending_with(...) -&gt; None</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cacheclear_keys_containing-none">@cache.clear_keys_containing(...) -&gt; None</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Sqlite Cache</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">API Reference</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="api-reference">API Reference</h1>
+<h4 id="cache-cache"><em>Cache(...) → Cache</em></h4>
+<ul>
+<li>filename: str = ".cache" - Cache file name.</li>
+<li>path: str = None - Path string to the wanted db location. If None, use current directory.</li>
+<li>in_memory: bool = True - Create database in-memory only. File is still created, but
+  nothing is stored in it.</li>
+<li>timeout: int - How long to wait for another connection to finnish executing before throwing an exception.</li>
+<li>kwargs: Pragma settings. https://www.sqlite.org/pragma.html</li>
+</ul>
+<p>Create a new cache in the specified location. The class itself is not a singleton, but cache
+instances with the same filename and path will share the same cache, and the latter instance
+will not clear the cache on instantiation.</p>
+<hr />
+<h4 id="cacheclose-none"><em>cache.close() → None</em></h4>
+<p>Closes the cache.</p>
+<hr />
+<h4 id="cacheadd-none"><em>cache.add(...) → None</em></h4>
+<ul>
+<li>key: str — Cache key.</li>
+<li>value: Any — Picklable object to store.</li>
+<li>timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
+  Negative numbers will keep the key in cache until manually removed.</li>
+</ul>
+<p>Set the value to the cache only if the key is not already in the cache,
+or the found value has expired.</p>
+<hr />
+<h4 id="cacheget-any"><em>cache.get(...) → Any</em></h4>
+<ul>
+<li>key: str — Cache key.</li>
+<li>default: Any = None — Value to return if key not in the cache.</li>
+</ul>
+<p>Get the value under some key. Return <code>default</code> if key not in the cache or expired.</p>
+<hr />
+<h4 id="cacheset-none"><em>cache.set(...) → None</em></h4>
+<ul>
+<li>key: str — Cache key.</li>
+<li>value: Any — Picklable object to store.</li>
+<li>timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
+  Negative numbers will keep the key in cache until manually removed.</li>
+</ul>
+<p>Set a value in cache under some key.</p>
+<hr />
+<h4 id="cacheupdate-none"><em>cache.update(...) → None</em></h4>
+<ul>
+<li>key: str — Cache key.</li>
+<li>value: Any — Picklable object to store.</li>
+</ul>
+<p>Update value in the cache. Does nothing if key not in the cache or expired.</p>
+<hr />
+<h4 id="cachetouch-none"><em>cache.touch(...) → None</em></h4>
+<ul>
+<li>key: str — Cache key.</li>
+<li>timeout: int = DEFAULT_TIMEOUT — How long the value is valid in cache.
+  Negative numbers will keep the key in cache until manually removed.</li>
+</ul>
+<p>Extend the lifetime of an object in cache. Does nothing if key is not in the cache or is expired.</p>
+<hr />
+<h4 id="cachedelete-none"><em>cache.delete(...) → None</em></h4>
+<ul>
+<li>key: str — Cache key.</li>
+</ul>
+<p>Remove the value under the given key from the cache.</p>
+<hr />
+<h4 id="cacheadd_many-none"><em>cache.add_many(...) → None</em></h4>
+<ul>
+<li>dict_: dict[str, Any] — Cache keys with values to add.</li>
+<li>timeout: int = DEFAULT_TIMEOUT — How long the values are valid in the cache.
+  Negative numbers will keep the key in cache until manually removed.</li>
+</ul>
+<p>For all keys in the given dict, add the value to the cache only if the key is not
+already in the cache, or the found value has expired.</p>
+<hr />
+<h4 id="cacheget_many-dictstr-any"><em>cache.get_many(...) → dict[str, Any]</em></h4>
+<ul>
+<li>keys: list[str] — List of cache keys.</li>
+</ul>
+<p>Get all values that exist and aren't expired from the given cache keys, and return a dict.</p>
+<hr />
+<h4 id="cacheset_many-none"><em>cache.set_many(...) → None</em></h4>
+<ul>
+<li>dict_: dict[str, Any] — Cache keys with values to set.</li>
+<li>timeout: int = DEFAULT_TIMEOUT — How long the values are valid in the cache.
+  Negative numbers will keep the key in cache until manually removed.</li>
+</ul>
+<p>Set values to the cache for all keys in the given dict.</p>
+<hr />
+<h4 id="cacheupdate_many-none"><em>cache.update_many(...) → None</em></h4>
+<ul>
+<li>dict_: dict[str, Any] — Cache keys with values to update to.</li>
+</ul>
+<p>Update values to the cache for all keys in the given dict. Does nothing if key not in cache or expired.</p>
+<hr />
+<h4 id="cachetouch_many-none"><em>cache.touch_many(...) → None</em></h4>
+<ul>
+<li>keys: list[str] — List of cache keys.</li>
+<li>timeout: int = DEFAULT_TIMEOUT — How long the value is valid in cache.
+  Negative numbers will keep the key in cache until manually removed.</li>
+</ul>
+<p>Extend the lifetime for all objects under the given keys in cache.
+Does nothing if a key is not in the cache or is expired.</p>
+<hr />
+<h4 id="cachedelete_many-none"><em>cache.delete_many(...) → None</em></h4>
+<ul>
+<li>keys: list[str] — List of cache keys.</li>
+</ul>
+<p>Remove all the values under the given keys from the cache.</p>
+<hr />
+<h4 id="cacheget_or_set-any"><em>cache.get_or_set(...) → Any</em></h4>
+<ul>
+<li>key: str — Cache key.</li>
+<li>default: Any — Picklable object to store if key is not in cache.</li>
+<li>timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
+  Negative numbers will keep the key in cache until manually removed.</li>
+</ul>
+<p>Get a value under some key, or set the default if key is not in cache.</p>
+<hr />
+<h4 id="cacheclear-none"><em>cache.clear() → None</em></h4>
+<p>Clear the cache from all values.</p>
+<hr />
+<h4 id="cacheincr-int"><em>cache.incr(...) → int</em></h4>
+<ul>
+<li>key: str — Cache key.</li>
+<li>delta: int = 1 — How much to increment.</li>
+</ul>
+<p>Increment the value in cache by the given delta.
+Note that this is not an atomic transaction!</p>
+<hr />
+<h4 id="cachedecr-int"><em>cache.decr(...) → int</em></h4>
+<ul>
+<li>key: str — Cache key.</li>
+<li>delta: int = 1 — How much to decrement.</li>
+</ul>
+<p>Decrement the value in cache by the given delta.
+Note that this is not an atomic transaction!</p>
+<hr />
+<h4 id="cachememoize-callable-any"><em>@cache.memoize(...) -&gt; Callable[..., Any]</em></h4>
+<ul>
+<li>timeout: int = DEFAULT_TIMEOUT — How long the value is valid in the cache.
+  Negative numbers will keep the key in cache until manually removed.</li>
+</ul>
+<p>Save the result of the decorated function in cache. Calls with different
+arguments are saved under different keys.</p>
+<hr />
+<h4 id="cachettl-int"><em>@cache.ttl(...) -&gt; int</em></h4>
+<ul>
+<li>key: str — Cache key.</li>
+</ul>
+<p>How long the key is still valid in the cache in seconds.
+Returns <code>-1</code> if the value for the key does not expire.
+Returns <code>-2</code> if the value for the key has expired, or has not been set.</p>
+<hr />
+<h4 id="cachettl_many-dictstr-int"><em>@cache.ttl_many(...) -&gt; dict[str, int]</em></h4>
+<ul>
+<li>keys: list[str] — List of cache keys.</li>
+</ul>
+<p>How long the given keys are still valid in the cache in seconds.
+Returns <code>-1</code> if a value for the key does not expire.
+Returns <code>-2</code> if a value for the key has expired, or has not been set.</p>
+<hr />
+<h4 id="cacheget_all_keys-liststr"><em>@cache.get_all_keys() -&gt; list[str]</em></h4>
+<p>Get all keys that exist in the cache for currently valid cache items.
+Returns a list of cache keys in naturally sorted order.</p>
+<hr />
+<h4 id="cachefind_matching_keys-liststr"><em>@cache.find_matching_keys(...) -&gt; list[str]</em></h4>
+<ul>
+<li>like_match_pattern: str – A string formatted for SQL <code>LIKE</code> operator comparison.</li>
+</ul>
+<p>Find keys that match a SQL <code>LIKE</code> pattern.
+Returns a list of matching keys.</p>
+<hr />
+<h4 id="cachefind_keys_starting_with-liststr"><em>@cache.find_keys_starting_with(...) -&gt; list[str]</em></h4>
+<ul>
+<li>pattern: str – The pattern to match at the start of the key.</li>
+</ul>
+<p>Find keys that start with the given pattern.
+Matching follows the SQLite specification for the <code>LIKE</code> operator, so
+it will match <code>'A'</code> to <code>'a'</code>, but not <code>'Ä'</code> to <code>'ä'</code>.
+Returns a list of matching cache keys in sort order.
+Will only return keys that exist in the cache for currently valid cache items.</p>
+<hr />
+<h4 id="cachefind_keys_ending_with-liststr"><em>@cache.find_keys_ending_with(...) -&gt; list[str]</em></h4>
+<ul>
+<li>pattern: str – The pattern to match at the end of the key.</li>
+</ul>
+<p>Find keys that end with the given pattern.
+Matching follows the SQLite specification for the <code>LIKE</code> operator, so
+it will match <code>'A'</code> to <code>'a'</code>, but not <code>'Ä'</code> to <code>'ä'</code>.
+Returns a list of matching cache keys in sort order.
+Will only return keys that exist in the cache for currently valid cache items.</p>
+<hr />
+<h4 id="cachefind_keys_containing-liststr"><em>@cache.find_keys_containing(...) -&gt; list[str]</em></h4>
+<ul>
+<li>pattern: str – The pattern to find in matching keys.</li>
+</ul>
+<p>Find keys that contain the given pattern anywhere in the string.
+Matching follows the SQLite specification for the <code>LIKE</code> operator, so
+it will match <code>'A'</code> to <code>'a'</code>, but not <code>'Ä'</code> to <code>'ä'</code>.
+Returns a list of matching cache keys in sort order.
+Will only return keys that exist in the cache for currently valid cache items.</p>
+<hr />
+<h4 id="cacheclear_matching_keys-none"><em>@cache.clear_matching_keys(...) -&gt; None</em></h4>
+<ul>
+<li>like_match_pattern: str – A string formatted for SQL <code>LIKE</code> operator comparison.</li>
+</ul>
+<p>Clear keys that match a SQL <code>LIKE</code> pattern.
+Matching follows the SQLite specification for the <code>LIKE</code> operator, so
+it will match <code>'A'</code> to <code>'a'</code>, but not <code>'Ä'</code> to <code>'ä'</code>.</p>
+<hr />
+<h4 id="cacheclear_keys_starting_with-none"><em>@cache.clear_keys_starting_with(...) -&gt; None</em></h4>
+<ul>
+<li>pattern: str – The pattern to match at the start of the key.</li>
+</ul>
+<p>Clear all keys from the cache that start with the given pattern.
+Matching follows the SQLite specification for the <code>LIKE</code> operator, so
+it will match <code>'A'</code> to <code>'a'</code>, but not <code>'Ä'</code> to <code>'ä'</code>.</p>
+<hr />
+<h4 id="cacheclear_keys_ending_with-none"><em>@cache.clear_keys_ending_with(...) -&gt; None</em></h4>
+<ul>
+<li>pattern: str – The pattern to match at the end of the key.</li>
+</ul>
+<p>Clear all keys from the cache that end with the given pattern.
+Matching follows the SQLite specification for the <code>LIKE</code> operator, so
+it will match <code>'A'</code> to <code>'a'</code>, but not <code>'Ä'</code> to <code>'ä'</code>.</p>
+<hr />
+<h4 id="cacheclear_keys_containing-none"><em>@cache.clear_keys_containing(...) -&gt; None</em></h4>
+<ul>
+<li>pattern: str – The pattern to find in matching keys.</li>
+</ul>
+<p>Clear keys that contain the given pattern anywhere in the string.
+Matching follows the SQLite specification for the <code>LIKE</code> operator, so
+it will match <code>'A'</code> to <code>'a'</code>, but not <code>'Ä'</code> to <code>'ä'</code>.</p>
+<hr />
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
