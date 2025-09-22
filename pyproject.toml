@@ -45,7 +45,7 @@ typing-extensions = { version = ">=4.10.0", python = "<3.11" }
 
 [tool.poetry.group.test.dependencies]
 pytest = "8.4.2"
-coverage = "7.10.6"
+coverage = "7.10.7"
 pytest-asyncio = "1.2.0"
 freezegun = "1.5.5"
 nox = "2025.5.1"
