@@ -45,15 +45,15 @@ typing-extensions = { version = ">=4.10.0", python = "<3.11" }
 
 [tool.poetry.group.test.dependencies]
 pytest = "8.4.2"
-coverage = "7.10.7"
+coverage = "7.11.0"
 pytest-asyncio = "1.2.0"
 freezegun = "1.5.5"
-nox = "2025.5.1"
+nox = "2025.10.16"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.6.1"
 pymdown-extensions = "10.16.1"
-mkdocs-mermaid2-plugin = "1.2.2"
+mkdocs-mermaid2-plugin = "1.2.3"
 
 [tool.poetry.group.lint.dependencies]
 pre-commit = "4.3.0"
