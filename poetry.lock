@@ -701,14 +701,14 @@ files = [
 
 [[package]]
 name = "nox"
-version = "2026.2.9"
+version = "2026.4.10"
 description = "Flexible test automation."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["test"]
 files = [
-    {file = "nox-2026.2.9-py3-none-any.whl", hash = "sha256:1b7143bc8ecdf25f2353201326152c5303ae4ae56ca097b1fb6179ad75164c47"},
-    {file = "nox-2026.2.9.tar.gz", hash = "sha256:1bc8a202ee8cd69be7aaada63b2a7019126899a06fc930a7aee75585bf8ee41b"},
+    {file = "nox-2026.4.10-py3-none-any.whl", hash = "sha256:082c117627590d9b90aa21f86df89b310b07c5842539524203bcb3c719f116c1"},
+    {file = "nox-2026.4.10.tar.gz", hash = "sha256:2d0af5374f3f37a295428c927d1b04a8182aa01762897d172446dda2f1ce9692"},
 ]
 
 [package.dependencies]
@@ -722,7 +722,7 @@ virtualenv = {version = ">=20.15", markers = "python_version >= \"3.10\""}
 
 [package.extras]
 pbs = ["pbs-installer[all] (>=2025.1.6)"]
-tox-to-nox = ["importlib-resources ; python_version < \"3.9\"", "jinja2", "tox (>=4)"]
+tox-to-nox = ["jinja2", "tox (>=4)"]
 uv = ["uv (>=0.1.6)"]
 
 [[package]]
@@ -837,14 +837,14 @@ extra = ["pygments (>=2.19.1)"]
 
 [[package]]
 name = "pytest"
-version = "9.0.2"
+version = "9.0.3"
 description = "pytest: simple powerful testing with Python"
 optional = false
 python-versions = ">=3.10"
 groups = ["test"]
 files = [
-    {file = "pytest-9.0.2-py3-none-any.whl", hash = "sha256:711ffd45bf766d5264d487b917733b453d917afd2b0ad65223959f59089f875b"},
-    {file = "pytest-9.0.2.tar.gz", hash = "sha256:75186651a92bd89611d1d9fc20f0b4345fd827c41ccd5c299a868a05d70edf11"},
+    {file = "pytest-9.0.3-py3-none-any.whl", hash = "sha256:2c5efc453d45394fdd706ade797c0a81091eccd1d6e4bccfcd476e2b8e0ab5d9"},
+    {file = "pytest-9.0.3.tar.gz", hash = "sha256:b86ada508af81d19edeb213c681b1d48246c1a91d304c6c81a427674c17eb91c"},
 ]
 
 [package.dependencies]
@@ -1135,4 +1135,4 @@ watchmedo = ["PyYAML (>=3.10)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "cc0bd2c50212156f40bcbdc9bf6526c6bb7adcd76f99dbd41cad15e3ecc48ef7"
+content-hash = "bbde81e97b2833182f0e7d71176db08aac48c11ff340d93696641c5767b6e1f5"
