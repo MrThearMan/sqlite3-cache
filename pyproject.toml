@@ -49,7 +49,7 @@ pytest = "9.1.1"
 coverage = "7.15.4"
 pytest-asyncio = "1.4.0"
 freezegun = "1.5.5"
-nox = "2026.8.10"
+nox = "2026.8.17"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.6.1"
